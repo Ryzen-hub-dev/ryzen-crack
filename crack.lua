@@ -9,11 +9,12 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "FakeExecutorGui"
 screenGui.Parent = PlayerGui
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Create main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 450, 0, 360)
-frame.Position = UDim2.new(0.5, -225, 0.5, -180)
+frame.Size = UDim2.new(0, 500, 0, 400)
+frame.Position = UDim2.new(0.5, -250, 0.5, -200)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
@@ -43,14 +44,14 @@ dragHeaderCorner.Parent = dragHeader
 
 -- Title label
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
-titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.Size = UDim2.new(1, 0, 1, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Script Capture Executor"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 20
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+titleLabel.TextYAlignment = Enum.TextYAlignment.Center
 titleLabel.Parent = dragHeader
 
 -- URL input textbox
@@ -111,11 +112,31 @@ fileNameLabel.Font = Enum.Font.Gotham
 fileNameLabel.TextXAlignment = Enum.TextXAlignment.Left
 fileNameLabel.Parent = frame
 
--- Content textbox (readonly)
+-- Content scrolling frame
+local contentFrame = Instance.new("ScrollingFrame")
+contentFrame.Size = UDim2.new(0.92, 0, 0, 140)
+contentFrame.Position = UDim2.new(0.04, 0, 0, 195)
+contentFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+contentFrame.BorderSizePixel = 0
+contentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+contentFrame.ScrollBarThickness = 6
+contentFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+contentFrame.Parent = frame
+
+local contentFrameCorner = Instance.new("UICorner")
+contentFrameCorner.CornerRadius = UDim.new(0, 8)
+contentFrameCorner.Parent = contentFrame
+
+local contentFrameStroke = Instance.new("UIStroke")
+contentFrameStroke.Thickness = 1
+contentFrameStroke.Color = Color3.fromRGB(80, 80, 80)
+contentFrameStroke.Parent = contentFrame
+
+-- Content textbox (inside scrolling frame)
 local contentBox = Instance.new("TextBox")
-contentBox.Size = UDim2.new(0.92, 0, 0, 120)
-contentBox.Position = UDim2.new(0.04, 0, 0, 195)
-contentBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+contentBox.Size = UDim2.new(1, -10, 0, 0)
+contentBox.Position = UDim2.new(0, 5, 0, 5)
+contentBox.BackgroundTransparency = 1
 contentBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 contentBox.PlaceholderText = "Captured script content will appear here"
 contentBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
@@ -126,21 +147,18 @@ contentBox.TextYAlignment = Enum.TextYAlignment.Top
 contentBox.MultiLine = true
 contentBox.ClearTextOnFocus = false
 contentBox.TextEditable = false
-contentBox.Parent = frame
+contentBox.Parent = contentFrame
 
-local contentBoxCorner = Instance.new("UICorner")
-contentBoxCorner.CornerRadius = UDim.new(0, 8)
-contentBoxCorner.Parent = contentBox
-
-local contentBoxStroke = Instance.new("UIStroke")
-contentBoxStroke.Thickness = 1
-contentBoxStroke.Color = Color3.fromRGB(80, 80, 80)
-contentBoxStroke.Parent = contentBox
+-- Update canvas size dynamically
+contentBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local textHeight = contentBox.TextBounds.Y
+    contentFrame.CanvasSize = UDim2.new(0, 0, 0, textHeight + 10)
+end)
 
 -- Copy button
 local copyButton = Instance.new("TextButton")
 copyButton.Size = UDim2.new(0.92, 0, 0, 40)
-copyButton.Position = UDim2.new(0.04, 0, 0, 315)
+copyButton.Position = UDim2.new(0.04, 0, 0, 345)
 copyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 copyButton.Text = "Copy Content"
@@ -208,13 +226,13 @@ executeButton.MouseButton1Click:Connect(function()
 
     -- Fetch script content
     local success, content = pcall(function()
-        return game:HttpGet(url)
+        return game:HttpGet(url, true)
     end)
 
     if not success then
         warn("Failed to fetch script: " .. content)
         fileNameLabel.Text = "Captured File: None"
-        contentBox.Text = "Error: Failed to fetch script"
+        contentBox.Text = "Error: Failed to fetch script - " .. content
         return
     end
 
@@ -231,13 +249,14 @@ executeButton.MouseButton1Click:Connect(function()
     })
 
     -- Log capture
-    print("Captured script: " .. fileName .. "\nContent length: " .. #content .. " characters")
+    print("Captured script: " .. fileName)
+    print("Content length: " .. #content .. " characters")
     print("Timestamp: " .. capturedScripts[#capturedScripts].timestamp)
 end)
 
 -- Copy button functionality
 copyButton.MouseButton1Click:Connect(function()
-    if contentBox.Text ~= "" and contentBox.Text ~= "Error: No URL provided" and contentBox.Text ~= "Error: Failed to fetch script" then
+    if contentBox.Text ~= "" and contentBox.Text ~= "Error: No URL provided" and not contentBox.Text:match("^Error:") then
         local success, err = pcall(function()
             setclipboard(contentBox.Text)
         end)
