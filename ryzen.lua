@@ -2118,18 +2118,18 @@ function Kavo.CreateLib(kavName, themeList)
     return Tabs
 end
 
-local Window = Kavo.CreateLib("YBA 自动农场 v2.0", "Ocean")
+local Window = Kavo.CreateLib("YBA Stand/Skin Farm", "Ocean")
 
-local Tab = Window:NewTab("替身农场")
-local Section = Tab:NewSection("设置")
+local Tab = Window:NewTab("Stand Farm")
+local Section = Tab:NewSection("Setting")
 
 -- 变量
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local Backpack = LocalPlayer.Backpack
 local isFarming = false
-local targetStand = "Silver Chariot"
-local farmType = "Stand"
+local targetStand = "Star Platinum"
+local farmMode = "Stand"  -- "Stand" or "Skin"
 local wantShiny = false
 local wantLimited = false
 
@@ -2147,165 +2147,135 @@ local AllStands = {
 
 -- 精确物品生成位置 (YBA 社区验证)
 local SpawnPositions = {
-    CFrame.new(-503, 19, -341), -- 公园垃圾桶
-    CFrame.new(-572, 19, -353), -- 喷泉附近
-    CFrame.new(-641, 19, -378), -- 火车站
-    CFrame.new(-432, 19, -285), -- 披萨店
-    CFrame.new(-695, 19, -413), -- 街机厅
-    CFrame.new(-366, 19, -226), -- 主街
-    CFrame.new(-760, 19, -468), -- 酒吧
-    CFrame.new(-294, 19, -167), -- 停车场
-    CFrame.new(-549, 19, -397), -- 楼梯
-    CFrame.new(-618, 19, -317)  -- NPC附近
+    CFrame.new(-503, 19, -341), -- Park trash
+    CFrame.new(-572, 19, -353), -- Fountain
+    CFrame.new(-641, 19, -378), -- Train station
+    CFrame.new(-432, 19, -285), -- Pizza shop
+    CFrame.new(-695, 19, -413), -- Arcade
+    CFrame.new(-366, 19, -226), -- Main street
+    CFrame.new(-760, 19, -468), -- Bar
+    CFrame.new(-294, 19, -167), -- Parking lot
+    CFrame.new(-549, 19, -397), -- Stairs
+    CFrame.new(-618, 19, -317)  -- NPC area
 }
 
--- GUI界面
-Section:NewDropdown("选择替身", "选择要刷的替身", AllStands, function(selected)
-    targetStand = selected
-    print("目标替身: " .. selected)
+-- GUI Elements
+Section:NewDropdown("Select Stand", "Choose the stand to farm", AllStands, function(selected)
+    targetStand = selected:lower()
 end)
 
-Section:NewDropdown("农场模式", "选择刷替身还是皮肤", {"Stand", "Skin"}, function(selected)
-    farmType = selected
+Section:NewDropdown("Farm Mode", "Choose to farm stand or skin", {"Stand", "Skin"}, function(selected)
+    farmMode = selected
 end)
 
-Section:NewToggle("要闪光皮肤", "皮肤模式下只保留闪光", function(state)
+Section:NewToggle("Shiny Skin", "Require shiny skin (for Skin mode)", function(state)
     wantShiny = state
 end)
 
-Section:NewToggle("要限量皮肤", "皮肤模式下只保留限量", function(state)
+Section:NewToggle("Limited Skin", "Require limited skin (for Skin mode)", function(state)
     wantLimited = state
 end)
 
-local StartButton = Section:NewButton("开始/停止农场", "点击开始自动刷替身", function()
+Section:NewButton("Start/Stop Farm", "Toggle farming", function()
     isFarming = not isFarming
-    StartButton.Text = isFarming and "停止农场" or "开始/停止农场"
-    print("农场状态: " .. (isFarming and "开启" or "关闭"))
 end)
 
--- 自动捡取物品函数
+-- Function to collect item (scan workspace, teleport if found, 1s delay)
 local function CollectItem(itemName)
-    for _, spawn in pairs(SpawnPositions) do
-        if not Character or not Character.Parent then return false end
-        HumanoidRootPart.CFrame = spawn
-        task.wait(0.5)
-        
-        -- 扫描附近物品
-        for _, obj in pairs(Workspace:GetChildren()) do
-            if obj.Name == itemName and obj:IsA("Part") then
-                if (obj.Position - HumanoidRootPart.Position).Magnitude < 20 then
-                    HumanoidRootPart.CFrame = obj.CFrame * CFrame.new(0, 5, 0)
-                    task.wait(0.3)
-                    
-                    local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
-                    if prompt then
-                        fireproximityprompt(prompt)
-                        task.wait(1.3) -- 用户要求的1.3秒延迟
-                        return true
-                    end
-                end
+    -- Scan entire workspace for item
+    for _, obj in pairs(Workspace:GetChildren()) do
+        if obj.Name == itemName and obj:IsA("Part") or obj:IsA("Model") then
+            HumanoidRootPart.CFrame = obj.CFrame * CFrame.new(0, 5, 0)
+            task.wait(0.3)
+            local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
+            if prompt then
+                fireproximityprompt(prompt, 1)
+                task.wait(1)  -- 1 second delay as per user request
+                return true
             end
         end
-        task.wait(1.3)
+    end
+    
+    -- If not found, teleport to hotspots
+    for _, pos in pairs(SpawnPositions) do
+        HumanoidRootPart.CFrame = pos
+        task.wait(1)  -- 1s delay between teleports
     end
     return false
 end
 
--- 使用物品函数
+-- Function to use item
 local function UseItem(itemName)
     local item = Backpack:FindFirstChild(itemName) or Character:FindFirstChild(itemName)
     if item then
         if item.Parent == Backpack then
-            HumanoidRootPart.Parent.Humanoid:EquipTool(item)
+            Character.Humanoid:EquipTool(item)
         end
         item:Activate()
-        task.wait(4)
+        task.wait(4)  -- Wait for use effect
         return true
     end
     return false
 end
 
--- 获取当前替身和皮肤
+-- Get current stand and skin (handle paths)
 local function GetCurrentStandInfo()
-    local success, result = pcall(function()
-        -- 尝试多个常见数据路径
-        local dataFolder = LocalPlayer:FindFirstChild("Data") or 
-                          LocalPlayer.PlayerGui:FindFirstChild("Main"):FindFirstChild("Data")
-        
-        local stand = dataFolder:FindFirstChild("Stand")
-        local skin = dataFolder:FindFirstChild("Skin") or dataFolder:FindFirstChild("SkinName")
-        
-        return string.lower(stand.Value or ""), string.lower(skin.Value or "none")
+    local success, stand, skin = pcall(function()
+        local data = LocalPlayer:FindFirstChild("Data") or LocalPlayer.PlayerGui.Main:FindFirstChild("Data")
+        local s = data:FindFirstChild("Stand").Value:lower()
+        local sk = (data:FindFirstChild("Skin") or data:FindFirstChild("SkinName")).Value:lower()
+        return s, sk
     end)
-    
-    if success then
-        return result
-    else
-        return "", "none" -- 默认值
-    end
+    return success and stand or "", success and skin or "none"
 end
 
--- 主农场循环
+-- Main farm loop
 spawn(function()
     while true do
         task.wait(0.5)
         if not isFarming then continue end
         
-        if not Character or not HumanoidRootPart then continue end
-        
-        -- 1. 捡箭
-        local hasArrow = Backpack:FindFirstChild("Mysterious Arrow") or Character:FindFirstChild("Mysterious Arrow")
-        if not hasArrow then
-            print("寻找箭...")
+        -- Get arrow if missing
+        if not (Backpack:FindFirstChild("Mysterious Arrow") or Character:FindFirstChild("Mysterious Arrow")) then
             CollectItem("Mysterious Arrow")
         end
         
-        -- 2. 使用箭
+        -- Use arrow
         UseItem("Mysterious Arrow")
-        task.wait(3)
+        task.wait(3)  -- Wait for stand to apply
         
-        -- 3. 检查结果
+        -- Check stand/skin
         local currentStand, currentSkin = GetCurrentStandInfo()
         local keep = false
-        
-        if farmType == "Stand" then
-            if currentStand == string.lower(targetStand) then
+        if farmMode == "Stand" then
+            if currentStand == targetStand then
                 keep = true
             end
-        else -- Skin mode
-            if currentStand == string.lower(targetStand) then
-                if (wantShiny and string.find(currentSkin, "shiny")) or 
-                   (wantLimited and string.find(currentSkin, "limited")) then
+        else  -- Skin mode
+            if currentStand == targetStand then
+                if (wantShiny and currentSkin:find("shiny")) or (wantLimited and currentSkin:find("limited")) then
                     keep = true
                 end
             end
         end
         
-        -- 4. 如果不是想要的，用罗卡重置
         if not keep then
-            local hasRoka = Backpack:FindFirstChild("Rokakaka") or Character:FindFirstChild("Rokakaka")
-            if not hasRoka then
-                print("寻找罗卡...")
+            -- Get roka if missing
+            if not (Backpack:FindFirstChild("Rokakaka") or Character:FindFirstChild("Rokakaka")) then
                 CollectItem("Rokakaka")
             end
             UseItem("Rokakaka")
-            print("重置中... 当前: " .. currentStand)
         else
-            print("🎉 成功获得: " .. targetStand .. " (" .. (farmType == "Skin" and currentSkin or "") .. ")")
+            -- Success
+            print("Obtained desired: " .. currentStand .. " with skin " .. currentSkin)
             isFarming = false
-            StartButton.Text = "开始/停止农场"
         end
     end
 end)
 
--- 角色重生处理
+-- Respawn handler
 LocalPlayer.CharacterAdded:Connect(function(newChar)
     Character = newChar
     HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
+    Backpack = LocalPlayer.Backpack
 end)
-
-print("=== YBA 自动农场加载完成 ===")
-print("1. 选择替身")
-print("2. 设置模式")
-print("3. 点击开始农场")
-print("脚本无错误，即可使用！")
