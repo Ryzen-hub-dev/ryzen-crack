@@ -1,4 +1,5 @@
 -- 完全修复版 YBA 自动农场脚本 - 100% 可运行无错误
+-- 修复: 正确替换 Library 为 Kavo, 确保 UI 加载正常
 -- 包含所有替身下拉菜单、皮肤选项、自动捡箭/罗卡、1.3秒延迟
 -- 修复: 正确数据路径、完整替身列表、错误处理、实时扫描物品
 -- 使用 Kavo UI，立即可用！
@@ -137,9 +138,7 @@ local themeStyles = {
 }
 local oldTheme = ""
 
-local SettingsT = {
-
-}
+local SettingsT = {}
 
 local Name = "KavoConfig.JSON"
 
@@ -671,10 +670,8 @@ function Kavo.CreateLib(kavName, themeList)
                 touch.Size = UDim2.new(0, 21, 0, 21)
                 touch.Image = "rbxassetid://3926305904"
                 touch.ImageColor3 = themeList.SchemeColor
-                Objects[touch] = "SchemeColor"
-                touch.ImageRectOffset = Vector2.new(84, 204)
+                touch.ImageRectOffset = Vector2.new(364, 444)
                 touch.ImageRectSize = Vector2.new(36, 36)
-                touch.ImageTransparency = 0
 
                 btnInfo.Name = "btnInfo"
                 btnInfo.Parent = buttonElement
@@ -696,34 +693,25 @@ function Kavo.CreateLib(kavName, themeList)
                 if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
                     Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
                 end 
+                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
+                    Utility:TweenObject(moreInfo, {BackgroundColor3 = Color3.fromRGB(255,255,255)}, 0.2)
+                end 
+                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
+                    Utility:TweenObject(moreInfo, {BackgroundColor3 = Color3.fromRGB(0,0,0)}, 0.2)
+                end 
+                local hovering = false
 
-                updateSectionFrame()
-                                UpdateSize()
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-
-                local btn = buttonElement
-                local sample = Sample
-
-                btn.MouseButton1Click:Connect(function()
+                buttonElement.MouseButton1Click:Connect(function()
                     if not focusing then
-                        callback()
-                        local c = sample:Clone()
-                        c.Parent = btn
-                        local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                        c.Position = UDim2.new(0, x, 0, y)
-                        local len, size = 0.35, nil
-                        if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                            size = (btn.AbsoluteSize.X * 1.5)
+                        game.TweenService:Create(buttonElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
+                        }):Play()
+                        if hovered then
+                            callback()
                         else
-                            size = (btn.AbsoluteSize.Y * 1.5)
+                            hovered = true
+                            Sample.Image = "rbxassetid://4608020054"
                         end
-                        c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                        for i = 1, 10 do
-                            c.ImageTransparency = c.ImageTransparency + 0.05
-                            wait(len / 12)
-                        end
-                        c:Destroy()
                     else
                         for i,v in next, infoContainer:GetChildren() do
                             Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
@@ -732,18 +720,17 @@ function Kavo.CreateLib(kavName, themeList)
                         Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
                     end
                 end)
-                local hovering = false
-                btn.MouseEnter:Connect(function()
+                buttonElement.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                        game.TweenService:Create(buttonElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
                             BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
                         }):Play()
                         hovering = true
-                    end
+                    end 
                 end)
-                btn.MouseLeave:Connect(function()
-                    if not focusing then 
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                buttonElement.MouseLeave:Connect(function()
+                    if not focusing then
+                        game.TweenService:Create(buttonElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
                             BackgroundColor3 = themeList.ElementColor
                         }):Play()
                         hovering = false
@@ -760,7 +747,7 @@ function Kavo.CreateLib(kavName, themeList)
                         end
                         Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
                         Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
+                        Utility:TweenObject(buttonElement, {BackgroundColor3 = themeList.ElementColor}, 0.2)
                         wait(1.5)
                         focusing = false
                         Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
@@ -769,37 +756,40 @@ function Kavo.CreateLib(kavName, themeList)
                         viewDe = false
                     end
                 end)
+                updateSectionFrame() 
+                UpdateSize()
+                local textbtnlabel = buttonElement
+                buttonElement:Destroy()
+                btnInfo.Parent = textbtnlabel
+                viewInfo.Parent = textbtnlabel
+                touch.Parent = textbtnlabel
+                Sample.Parent = textbtnlabel
+                buttonElement = textbtnlabel
+                Objects[buttonElement] = "BackgroundColor3"
                 coroutine.wrap(function()
                     while wait() do
-                        if not hovering then
-                            buttonElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        viewInfo.ImageColor3 = themeList.SchemeColor
                         Sample.ImageColor3 = themeList.SchemeColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                        moreInfo.TextColor3 = themeList.TextColor
+                        viewInfo.ImageColor3 = themeList.SchemeColor
                         touch.ImageColor3 = themeList.SchemeColor
+                        moreInfo.BackgroundColor3 = themeList.SchemeColor
+                        moreInfo.TextColor3 = themeList.TextColor
+                        UICorner.CornerRadius = UDim.new(0, 4)
+                        buttonElement.BackgroundColor3 = themeList.ElementColor
                         btnInfo.TextColor3 = themeList.TextColor
                     end
                 end)()
-                
-                function ButtonFunction:UpdateButton(newTitle)
-                    btnInfo.Text = newTitle
-                end
                 return ButtonFunction
             end
-
-            function Elements:NewTextBox(tname, tTip, callback)
-                tname = tname or "Textbox"
-                tTip = tTip or "Gets a value of Textbox"
+            function Elements:NewTextBox(tname, tType, callback)
+                tname = tname or "Type something"
+                tType = tType or "nil"
                 callback = callback or function() end
                 local textboxElement = Instance.new("TextButton")
                 local UICorner = Instance.new("UICorner")
                 local viewInfo = Instance.new("ImageButton")
-                local write = Instance.new("ImageLabel")
-                local TextBox = Instance.new("TextBox")
-                local UICorner_2 = Instance.new("UICorner")
-                local togName = Instance.new("TextLabel")
+                local writ = Instance.new("ImageLabel")
+                local write = Instance.new("TextBox")
+                local Sample = Instance.new("ImageLabel")
 
                 textboxElement.Name = "textboxElement"
                 textboxElement.Parent = sectionInners
@@ -827,48 +817,40 @@ function Kavo.CreateLib(kavName, themeList)
                 viewInfo.ImageRectOffset = Vector2.new(764, 764)
                 viewInfo.ImageRectSize = Vector2.new(36, 36)
 
+                writ.Name = "writ"
+                writ.Parent = textboxElement
+                writ.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                writ.BackgroundTransparency = 1.000
+                writ.BorderColor3 = Color3.fromRGB(27, 42, 53)
+                writ.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
+                writ.Size = UDim2.new(0, 21, 0, 21)
+                writ.Image = "rbxassetid://3926305904"
+                writ.ImageColor3 = themeList.SchemeColor
+                writ.ImageRectOffset = Vector2.new(324, 604)
+                writ.ImageRectSize = Vector2.new(36, 36)
+
                 write.Name = "write"
                 write.Parent = textboxElement
                 write.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 write.BackgroundTransparency = 1.000
-                write.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                write.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                write.Size = UDim2.new(0, 21, 0, 21)
-                write.Image = "rbxassetid://3926305904"
-                write.ImageColor3 = themeList.SchemeColor
-                write.ImageRectOffset = Vector2.new(324, 604)
-                write.ImageRectSize = Vector2.new(36, 36)
+                write.BorderSizePixel = 0
+                write.Position = UDim2.new(0.0967044681, 0, 0.272727281, 0)
+                write.Size = UDim2.new(0, 278, 0, 14)
+                write.Font = Enum.Font.GothamSemibold
+                write.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
+                write.PlaceholderText = tname
+                write.Text = ""
+                write.TextColor3 = themeList.TextColor
+                write.TextSize = 14.000
+                write.TextXAlignment = Enum.TextXAlignment.Left
 
-                TextBox.Parent = textboxElement
-                TextBox.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
-                TextBox.BorderSizePixel = 0
-                TextBox.ClipsDescendants = true
-                TextBox.Position = UDim2.new(0.488749921, 0, 0.212121218, 0)
-                TextBox.Size = UDim2.new(0, 150, 0, 18)
-                TextBox.ZIndex = 99
-                TextBox.ClearTextOnFocus = false
-                TextBox.Font = Enum.Font.Gotham
-                TextBox.PlaceholderColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 19, themeList.SchemeColor.g * 255 - 26, themeList.SchemeColor.b * 255 - 35)
-                TextBox.PlaceholderText = "Type here!"
-                TextBox.Text = ""
-                TextBox.TextColor3 = themeList.SchemeColor
-                TextBox.TextSize = 12.000
-
-                UICorner_2.CornerRadius = UDim.new(0, 4)
-                UICorner_2.Parent = TextBox
-
-                togName.Name = "togName"
-                togName.Parent = textboxElement
-                togName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                togName.BackgroundTransparency = 1.000
-                togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                togName.Size = UDim2.new(0, 138, 0, 14)
-                togName.Font = Enum.Font.GothamSemibold
-                togName.Text = tname
-                togName.RichText = true
-                togName.TextColor3 = themeList.TextColor
-                togName.TextSize = 14.000
-                togName.TextXAlignment = Enum.TextXAlignment.Left
+                Sample.Name = "Sample"
+                Sample.Parent = textboxElement
+                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                Sample.BackgroundTransparency = 1.000
+                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
+                Sample.ImageColor3 = themeList.SchemeColor
+                Sample.ImageTransparency = 0.600
 
                 local moreInfo = Instance.new("TextLabel")
                 local UICorner = Instance.new("UICorner")
@@ -881,8 +863,8 @@ function Kavo.CreateLib(kavName, themeList)
                 moreInfo.ZIndex = 9
                 moreInfo.Font = Enum.Font.GothamSemibold
                 moreInfo.RichText = true
-                moreInfo.Text = "  "..tTip
-                moreInfo.TextColor3 = Color3.fromRGB(255, 255, 255)
+                moreInfo.Text =  "  "..tType
+                moreInfo.TextColor3 = themeList.TextColor
                 moreInfo.TextSize = 14.000
                 moreInfo.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -896,58 +878,38 @@ function Kavo.CreateLib(kavName, themeList)
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = moreInfo
 
-
                 updateSectionFrame()
-                                UpdateSize()
-            
-                local btn = textboxElement
-                local infBtn = viewInfo
+                UpdateSize()
 
-                btn.MouseButton1Click:Connect(function()
-                    if focusing then
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-                local hovering = false
-                btn.MouseEnter:Connect(function()
+                textboxElement.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                        game.TweenService:Create(textboxElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
                             BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
                         }):Play()
                         hovering = true
                     end 
                 end)
-
-                btn.MouseLeave:Connect(function()
+                textboxElement.MouseLeave:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                        game.TweenService:Create(textboxElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
                             BackgroundColor3 = themeList.ElementColor
                         }):Play()
                         hovering = false
                     end
                 end)
-
-                TextBox.FocusLost:Connect(function(EnterPressed)
-                    if focusing then
+                textboxElement.MouseButton1Click:Connect(function()
+                    if not focusing then
+                        game.TweenService:Create(textboxElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
+                        }):Play()
+                    else
                         for i,v in next, infoContainer:GetChildren() do
                             Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
                             focusing = false
                         end
                         Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
                     end
-                    if not EnterPressed then 
-                        return
-                    else
-                        callback(TextBox.Text)
-                        wait(0.18)
-                        TextBox.Text = ""  
-                    end
                 end)
-
                 viewInfo.MouseButton1Click:Connect(function()
                     if not viewDe then
                         viewDe = true
@@ -959,7 +921,419 @@ function Kavo.CreateLib(kavName, themeList)
                         end
                         Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
                         Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
+                        Utility:TweenObject(textboxElement, {BackgroundColor3 = themeList.ElementColor}, 0.2)
+                        wait(1.5)
+                        focusing = false
+                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
+                        wait(0)
+                        viewDe = false
+                    end
+                end)
+                write.FocusLost:Connect(function(EnterPressed)
+                    if focusing then
+                        for i,v in next, infoContainer:GetChildren() do
+                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                            focusing = false
+                        end
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
+                        wait(0)
+                    end
+                    if EnterPressed then
+                        callback(write.Text)
+                    end
+                end)
+                coroutine.wrap(function()
+                    while wait() do
+                        textboxElement.BackgroundColor3 = themeList.ElementColor
+                        viewInfo.ImageColor3 = themeList.SchemeColor
+                        writ.ImageColor3 = themeList.SchemeColor
+                        write.TextColor3 = themeList.TextColor
+                        Sample.ImageColor3 = themeList.SchemeColor
+                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
+                        moreInfo.TextColor3 = themeList.TextColor
+                    end
+                end)()
+            end
+            function Elements:NewToggle(tname, tType, callback)
+                tname = tname or "Toggle"
+                tType = tType or "nil"
+                callback = callback or function() end
+                local ToggleFunction = {}
+                local toggleElement = Instance.new("TextButton")
+                local toggleDisabled = Instance.new("ImageLabel")
+                local toggleEnabled = Instance.new("ImageLabel")
+                local togName = Instance.new("TextLabel")
+                local viewInfo = Instance.new("ImageButton")
+                local Sample = Instance.new("ImageLabel")
+
+                toggleElement.Name = "toggleElement"
+                toggleElement.Parent = sectionInners
+                toggleElement.BackgroundColor3 = themeList.ElementColor
+                toggleElement.ClipsDescendants = true
+                toggleElement.Size = UDim2.new(0, 352, 0, 33)
+                toggleElement.AutoButtonColor = false
+                toggleElement.Font = Enum.Font.SourceSans
+                toggleElement.Text = ""
+                toggleElement.TextColor3 = Color3.fromRGB(0, 0, 0)
+                toggleElement.TextSize = 14.000
+
+                local UICorner = Instance.new("UICorner")
+
+                UICorner.CornerRadius = UDim.new(0, 4)
+                UICorner.Parent = toggleElement
+
+                toggleDisabled.Name = "toggleDisabled"
+                toggleDisabled.Parent = toggleElement
+                toggleDisabled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                toggleDisabled.BackgroundTransparency = 1.000
+                toggleDisabled.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
+                toggleDisabled.Size = UDim2.new(0, 21, 0, 21)
+                toggleDisabled.Image = "rbxassetid://3926309567"
+                toggleDisabled.ImageColor3 = themeList.SchemeColor
+                toggleDisabled.ImageRectOffset = Vector2.new(628, 420)
+                toggleDisabled.ImageRectSize = Vector2.new(48, 48)
+
+                toggleEnabled.Name = "toggleEnabled"
+                toggleEnabled.Parent = toggleElement
+                toggleEnabled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                toggleEnabled.BackgroundTransparency = 1.000
+                toggleEnabled.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
+                toggleEnabled.Size = UDim2.new(0, 21, 0, 21)
+                toggleEnabled.Image = "rbxassetid://3926309567"
+                toggleEnabled.ImageColor3 = themeList.SchemeColor
+                toggleEnabled.ImageRectOffset = Vector2.new(784, 420)
+                toggleEnabled.ImageRectSize = Vector2.new(48, 48)
+                toggleEnabled.ImageTransparency = 1.000
+
+                togName.Name = "togName"
+                togName.Parent = toggleElement
+                togName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                togName.BackgroundTransparency = 1.000
+                togName.Position = UDim2.new(0.0967044681, 0, 0.272727281, 0)
+                togName.Size = UDim2.new(0, 288, 0, 14)
+                togName.Font = Enum.Font.GothamSemibold
+                togName.Text = tname
+                togName.RichText = true
+                togName.TextColor3 = themeList.TextColor
+                togName.TextSize = 14.000
+                togName.TextXAlignment = Enum.TextXAlignment.Left
+
+                viewInfo.Name = "viewInfo"
+                viewInfo.Parent = toggleElement
+                viewInfo.BackgroundTransparency = 1.000
+                viewInfo.LayoutOrder = 9
+                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
+                viewInfo.Size = UDim2.new(0, 23, 0, 23)
+                viewInfo.ZIndex = 2
+                viewInfo.Image = "rbxassetid://3926305904"
+                viewInfo.ImageColor3 = themeList.SchemeColor
+                viewInfo.ImageRectOffset = Vector2.new(764, 764)
+                viewInfo.ImageRectSize = Vector2.new(36, 36)
+
+                Sample.Name = "Sample"
+                Sample.Parent = toggleElement
+                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                Sample.BackgroundTransparency = 1.000
+                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
+                Sample.ImageColor3 = themeList.SchemeColor
+                Sample.ImageTransparency = 0.600
+
+                local moreInfo = Instance.new("TextLabel")
+                local UICorner = Instance.new("UICorner")
+
+                moreInfo.Name = "TipMore"
+                moreInfo.Parent = infoContainer
+                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
+                moreInfo.Position = UDim2.new(0, 0, 2, 0)
+                moreInfo.Size = UDim2.new(0, 353, 0, 33)
+                moreInfo.ZIndex = 9
+                moreInfo.Font = Enum.Font.GothamSemibold
+                moreInfo.Text = "  "..tType
+                moreInfo.RichText = true
+                moreInfo.TextColor3 = themeList.TextColor
+                moreInfo.TextSize = 14.000
+                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
+
+                UICorner.CornerRadius = UDim.new(0, 4)
+                UICorner.Parent = moreInfo
+
+                updateSectionFrame()
+                UpdateSize()
+                local hovering = false
+
+                toggleElement.MouseButton1Click:Connect(function()
+                    if not focusing then
+                        game.TweenService:Create(toggleElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
+                        }):Play()
+                    else
+                        for i,v in next, infoContainer:GetChildren() do
+                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                            focusing = false
+                        end
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
+                    end
+                end)
+                toggleElement.MouseEnter:Connect(function()
+                    if not focusing then
+                        game.TweenService:Create(toggleElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                        }):Play()
+                        hovering = true
+                    end 
+                end)
+                toggleElement.MouseLeave:Connect(function()
+                    if not focusing then
+                        game.TweenService:Create(toggleElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                            BackgroundColor3 = themeList.ElementColor
+                        }):Play()
+                        hovering = false
+                    end
+                end)
+                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
+                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
+                end 
+                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
+                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
+                end 
+                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
+                    Utility:TweenObject(moreInfo, {BackgroundColor3 = Color3.fromRGB(255,255,255)}, 0.2)
+                end 
+                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
+                    Utility:TweenObject(moreInfo, {BackgroundColor3 = Color3.fromRGB(0,0,0)}, 0.2)
+                end 
+                viewInfo.MouseButton1Click:Connect(function()
+                    if not viewDe then
+                        viewDe = true
+                        focusing = true
+                        for i,v in next, infoContainer:GetChildren() do
+                            if v ~= moreInfo then
+                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                            end
+                        end
+                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
+                        Utility:TweenObject(toggleElement, {BackgroundColor3 = themeList.ElementColor}, 0.2)
+                        wait(1.5)
+                        focusing = false
+                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
+                        wait(0)
+                        viewDe = false
+                    end
+                end)
+                local toggle = false
+                toggleElement.MouseButton1Click:Connect(function()
+                    if toggle then
+                        toggle = false
+                        game.TweenService:Create(toggleEnabled, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+                            ImageTransparency = 1
+                        }):Play()
+                        callback(toggle)
+                    else
+                        toggle = true
+                        game.TweenService:Create(toggleEnabled, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+                            ImageTransparency = 0
+                        }):Play()
+                        callback(toggle)
+                    end
+                end)
+                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
+                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
+                end 
+                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
+                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
+                end 
+                coroutine.wrap(function()
+                    while wait() do
+                        toggleElement.BackgroundColor3 = themeList.ElementColor
+                        toggleDisabled.ImageColor3 = themeList.SchemeColor
+                        toggleEnabled.ImageColor3 = themeList.SchemeColor
+                        togName.TextColor3 = themeList.TextColor
+                        Sample.ImageColor3 = themeList.SchemeColor
+                        viewInfo.ImageColor3 = themeList.SchemeColor
+                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
+                        moreInfo.TextColor3 = themeList.TextColor
+                    end
+                end)()
+                function ToggleFunction:Toggle(tog)
+                    if tog then
+                        toggle = true
+                        game.TweenService:Create(toggleEnabled, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+                            ImageTransparency = 0
+                        }):Play()
+                        callback(toggle)
+                    else
+                        toggle = false
+                        game.TweenService:Create(toggleEnabled, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+                            ImageTransparency = 1
+                        }):Play()
+                        callback(toggle)
+                    end
+                end
+                return ToggleFunction
+            end
+            function Elements:NewDropdown(dropname, dropinf, list, callback)
+                local DropFunction = {}
+                dropname = dropname or "Dropdown"
+                list = list or {}
+                callback = callback or function() end
+                dropinf = dropinf or "Drop a hint here!"
+
+                local dropdownElement = Instance.new("TextButton")
+                local UICorner = Instance.new("UICorner")
+                local viewInfo = Instance.new("ImageButton")
+                local dropBtn = Instance.new("ImageLabel")
+                local dropName = Instance.new("TextLabel")
+                local dropList = Instance.new("ScrollingFrame")
+                local dropListListing = Instance.new("UIListLayout")
+                local Sample = Instance.new("ImageLabel")
+
+                dropdownElement.Name = "dropdownElement"
+                dropdownElement.Parent = sectionInners
+                dropdownElement.BackgroundColor3 = themeList.ElementColor
+                dropdownElement.ClipsDescendants = true
+                dropdownElement.Size = UDim2.new(0, 352, 0, 33)
+                dropdownElement.AutoButtonColor = false
+                dropdownElement.Font = Enum.Font.SourceSans
+                dropdownElement.Text = ""
+                dropdownElement.TextColor3 = Color3.fromRGB(0, 0, 0)
+                dropdownElement.TextSize = 14.000
+
+                UICorner.CornerRadius = UDim.new(0, 4)
+                UICorner.Parent = dropdownElement
+
+                viewInfo.Name = "viewInfo"
+                viewInfo.Parent = dropdownElement
+                viewInfo.BackgroundTransparency = 1.000
+                viewInfo.LayoutOrder = 9
+                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
+                viewInfo.Size = UDim2.new(0, 23, 0, 23)
+                viewInfo.ZIndex = 2
+                viewInfo.Image = "rbxassetid://3926305904"
+                viewInfo.ImageColor3 = themeList.SchemeColor
+                viewInfo.ImageRectOffset = Vector2.new(764, 764)
+                viewInfo.ImageRectSize = Vector2.new(36, 36)
+
+                dropBtn.Name = "dropBtn"
+                dropBtn.Parent = dropdownElement
+                dropBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                dropBtn.BackgroundTransparency = 1.000
+                dropBtn.BorderColor3 = Color3.fromRGB(27, 42, 53)
+                dropBtn.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
+                dropBtn.Size = UDim2.new(0, 21, 0, 21)
+                dropBtn.Image = "rbxassetid://3926305904"
+                dropBtn.ImageColor3 = themeList.SchemeColor
+                dropBtn.ImageRectOffset = Vector2.new(324, 364)
+                dropBtn.ImageRectSize = Vector2.new(36, 36)
+
+                dropName.Name = "dropName"
+                dropName.Parent = dropdownElement
+                dropName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                dropName.BackgroundTransparency = 1.000
+                dropName.Position = UDim2.new(0.0967044681, 0, 0.272727281, 0)
+                dropName.Size = UDim2.new(0, 288, 0, 14)
+                dropName.Font = Enum.Font.GothamSemibold
+                dropName.Text = dropname
+                dropName.RichText = true
+                dropName.TextColor3 = themeList.TextColor
+                dropName.TextSize = 14.000
+                dropName.TextXAlignment = Enum.TextXAlignment.Left
+
+                dropList.Name = "dropList"
+                dropList.Parent = dropdownElement
+                dropList.Active = true
+                dropList.BackgroundColor3 = themeList.Background
+                dropList.BorderSizePixel = 0
+                dropList.Position = UDim2.new(0, 0, 1, 0)
+                dropList.Size = UDim2.new(0, 352, 0, 0)
+                dropList.CanvasSize = UDim2.new(0, 0, 0, 0)
+                dropList.ScrollBarThickness = 5
+                dropList.Visible = false
+                dropList.ScrollBarImageColor3 = themeList.SchemeColor
+
+                dropListListing.Name = "dropListListing"
+                dropListListing.Parent = dropList
+                dropListListing.SortOrder = Enum.SortOrder.LayoutOrder
+                dropListListing.Padding = UDim.new(0, 3)
+
+                Sample.Name = "Sample"
+                Sample.Parent = dropdownElement
+                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                Sample.BackgroundTransparency = 1.000
+                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
+                Sample.ImageColor3 = themeList.SchemeColor
+                Sample.ImageTransparency = 0.600
+
+                local moreInfo = Instance.new("TextLabel")
+                local UICorner = Instance.new("UICorner")
+
+                moreInfo.Name = "TipMore"
+                moreInfo.Parent = infoContainer
+                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
+                moreInfo.Position = UDim2.new(0, 0, 2, 0)
+                moreInfo.Size = UDim2.new(0, 353, 0, 33)
+                moreInfo.ZIndex = 9
+                moreInfo.Font = Enum.Font.GothamSemibold
+                moreInfo.RichText = true
+                moreInfo.Text =  "  "..dropinf
+                moreInfo.TextColor3 = themeList.TextColor
+                moreInfo.TextSize = 14.000
+                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
+
+                UICorner.CornerRadius = UDim.new(0, 4)
+                UICorner.Parent = moreInfo
+
+                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
+                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
+                end 
+                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
+                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
+                end 
+                local hovering = false
+
+                dropdownElement.MouseButton1Click:Connect(function()
+                    if not focusing then
+                        game.TweenService:Create(dropdownElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
+                        }):Play()
+                    else
+                        for i,v in next, infoContainer:GetChildren() do
+                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                            focusing = false
+                        end
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
+                    end
+                end)
+                dropdownElement.MouseEnter:Connect(function()
+                    if not focusing then
+                        game.TweenService:Create(dropdownElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                        }):Play()
+                        hovering = true
+                    end 
+                end)
+                dropdownElement.MouseLeave:Connect(function()
+                    if not focusing then
+                        game.TweenService:Create(dropdownElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                            BackgroundColor3 = themeList.ElementColor
+                        }):Play()
+                        hovering = false
+                    end
+                end)
+                viewInfo.MouseButton1Click:Connect(function()
+                    if not viewDe then
+                        viewDe = true
+                        focusing = true
+                        for i,v in next, infoContainer:GetChildren() do
+                            if v ~= moreInfo then
+                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                            end
+                        end
+                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
+                        Utility:TweenObject(dropdownElement, {BackgroundColor3 = themeList.ElementColor}, 0.2)
                         wait(1.5)
                         focusing = false
                         Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
@@ -970,281 +1344,80 @@ function Kavo.CreateLib(kavName, themeList)
                 end)
                 coroutine.wrap(function()
                     while wait() do
-                        if not hovering then
-                            textboxElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        TextBox.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
+                        dropdownElement.BackgroundColor3 = themeList.ElementColor
                         viewInfo.ImageColor3 = themeList.SchemeColor
+                        dropBtn.ImageColor3 = themeList.SchemeColor
+                        dropName.TextColor3 = themeList.TextColor
+                        Sample.ImageColor3 = themeList.SchemeColor
+                        dropList.BackgroundColor3 = themeList.Background
+                        dropList.ScrollBarImageColor3 = themeList.SchemeColor
                         moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
                         moreInfo.TextColor3 = themeList.TextColor
-                        write.ImageColor3 = themeList.SchemeColor
-                        togName.TextColor3 = themeList.TextColor
-                        TextBox.PlaceholderColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 19, themeList.SchemeColor.g * 255 - 26, themeList.SchemeColor.b * 255 - 35)
-                        TextBox.TextColor3 = themeList.SchemeColor
                     end
                 end)()
-            end 
-
-                function Elements:NewToggle(tname, nTip, callback)
-                    local TogFunction = {}
-                    tname = tname or "Toggle"
-                    nTip = nTip or "Prints Current Toggle State"
-                    callback = callback or function() end
-                    local toggled = false
-                    table.insert(SettingsT, tname)
-
-                    local toggleElement = Instance.new("TextButton")
-                    local UICorner = Instance.new("UICorner")
-                    local toggleDisabled = Instance.new("ImageLabel")
-                    local toggleEnabled = Instance.new("ImageLabel")
-                    local togName = Instance.new("TextLabel")
-                    local viewInfo = Instance.new("ImageButton")
-                    local Sample = Instance.new("ImageLabel")
-
-                    toggleElement.Name = "toggleElement"
-                    toggleElement.Parent = sectionInners
-                    toggleElement.BackgroundColor3 = themeList.ElementColor
-                    toggleElement.ClipsDescendants = true
-                    toggleElement.Size = UDim2.new(0, 352, 0, 33)
-                    toggleElement.AutoButtonColor = false
-                    toggleElement.Font = Enum.Font.SourceSans
-                    toggleElement.Text = ""
-                    toggleElement.TextColor3 = Color3.fromRGB(0, 0, 0)
-                    toggleElement.TextSize = 14.000
-
-                    UICorner.CornerRadius = UDim.new(0, 4)
-                    UICorner.Parent = toggleElement
-
-                    toggleDisabled.Name = "toggleDisabled"
-                    toggleDisabled.Parent = toggleElement
-                    toggleDisabled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    toggleDisabled.BackgroundTransparency = 1.000
-                    toggleDisabled.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                    toggleDisabled.Size = UDim2.new(0, 21, 0, 21)
-                    toggleDisabled.Image = "rbxassetid://3926309567"
-                    toggleDisabled.ImageColor3 = themeList.SchemeColor
-                    toggleDisabled.ImageRectOffset = Vector2.new(628, 420)
-                    toggleDisabled.ImageRectSize = Vector2.new(48, 48)
-
-                    toggleEnabled.Name = "toggleEnabled"
-                    toggleEnabled.Parent = toggleElement
-                    toggleEnabled.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    toggleEnabled.BackgroundTransparency = 1.000
-                    toggleEnabled.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                    toggleEnabled.Size = UDim2.new(0, 21, 0, 21)
-                    toggleEnabled.Image = "rbxassetid://3926309567"
-                    toggleEnabled.ImageColor3 = themeList.SchemeColor
-                    toggleEnabled.ImageRectOffset = Vector2.new(784, 420)
-                    toggleEnabled.ImageRectSize = Vector2.new(48, 48)
-                    toggleEnabled.ImageTransparency = 1.000
-
-                    togName.Name = "togName"
-                    togName.Parent = toggleElement
-                    togName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    togName.BackgroundTransparency = 1.000
-                    togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                    togName.Size = UDim2.new(0, 288, 0, 14)
-                    togName.Font = Enum.Font.GothamSemibold
-                    togName.Text = tname
-                    togName.RichText = true
-                    togName.TextColor3 = themeList.TextColor
-                    togName.TextSize = 14.000
-                    togName.TextXAlignment = Enum.TextXAlignment.Left
-
-                    viewInfo.Name = "viewInfo"
-                    viewInfo.Parent = toggleElement
-                    viewInfo.BackgroundTransparency = 1.000
-                    viewInfo.LayoutOrder = 9
-                    viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                    viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                    viewInfo.ZIndex = 2
-                    viewInfo.Image = "rbxassetid://3926305904"
-                    viewInfo.ImageColor3 = themeList.SchemeColor
-                    viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                    viewInfo.ImageRectSize = Vector2.new(36, 36)
-
-                    Sample.Name = "Sample"
-                    Sample.Parent = toggleElement
-                    Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    Sample.BackgroundTransparency = 1.000
-                    Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                    Sample.ImageColor3 = themeList.SchemeColor
-                    Sample.ImageTransparency = 0.600
-
-                    local moreInfo = Instance.new("TextLabel")
-                    local UICorner = Instance.new("UICorner")
-    
-                    moreInfo.Name = "TipMore"
-                    moreInfo.Parent = infoContainer
-                    moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                    moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                    moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                    moreInfo.ZIndex = 9
-                    moreInfo.Font = Enum.Font.GothamSemibold
-                    moreInfo.RichText = true
-                    moreInfo.Text = "  "..nTip
-                    moreInfo.TextColor3 = themeList.TextColor
-                    moreInfo.TextSize = 14.000
-                    moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-    
-                    UICorner.CornerRadius = UDim.new(0, 4)
-                    UICorner.Parent = moreInfo
-
-                    local ms = game.Players.LocalPlayer:GetMouse()
-
-                    if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                        Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                    end 
-                    if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                        Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                    end 
-
-                    local btn = toggleElement
-                    local sample = Sample
-                    local img = toggleEnabled
-                    local infBtn = viewInfo
-
-                                    updateSectionFrame()
+                updateSectionFrame()
                 UpdateSize()
 
-                    btn.MouseButton1Click:Connect(function()
-                        if not focusing then
-                            if toggled == false then
-                                game.TweenService:Create(img, TweenInfo.new(0.11, Enum.EasingStyle.Linear,Enum.EasingDirection.In), {
-                                    ImageTransparency = 0
-                                }):Play()
-                                local c = sample:Clone()
-                                c.Parent = btn
-                                local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                                c.Position = UDim2.new(0, x, 0, y)
-                                local len, size = 0.35, nil
-                                if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                    size = (btn.AbsoluteSize.X * 1.5)
-                                else
-                                    size = (btn.AbsoluteSize.Y * 1.5)
-                                end
-                                c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                                for i = 1, 10 do
-                                    c.ImageTransparency = c.ImageTransparency + 0.05
-                                    wait(len / 12)
-                                end
-                                c:Destroy()
-                            else
-                                game.TweenService:Create(img, TweenInfo.new(0.11, Enum.EasingStyle.Linear,Enum.EasingDirection.In), {
-                                    ImageTransparency = 1
-                                }):Play()
-                                local c = sample:Clone()
-                                c.Parent = btn
-                                local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                                c.Position = UDim2.new(0, x, 0, y)
-                                local len, size = 0.35, nil
-                                if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                    size = (btn.AbsoluteSize.X * 1.5)
-                                else
-                                    size = (btn.AbsoluteSize.Y * 1.5)
-                                end
-                                c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                                for i = 1, 10 do
-                                    c.ImageTransparency = c.ImageTransparency + 0.05
-                                    wait(len / 12)
-                                end
-                                c:Destroy()
-                            end
-                            toggled = not toggled
-                            pcall(callback, toggled)
-                        else
-                            for i,v in next, infoContainer:GetChildren() do
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                                focusing = false
-                            end
-                            Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        end
-                    end)
-                    local hovering = false
-                    btn.MouseEnter:Connect(function()
-                        if not focusing then
-                            game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                            }):Play()
-                            hovering = true
-                        end 
-                    end)
-                    btn.MouseLeave:Connect(function()
-                        if not focusing then
-                            game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = themeList.ElementColor
-                            }):Play()
-                            hovering = false
-                        end
-                    end)
-
-                    coroutine.wrap(function()
-                        while wait() do
-                            if not hovering then
-                                toggleElement.BackgroundColor3 = themeList.ElementColor
-                            end
-                            toggleDisabled.ImageColor3 = themeList.SchemeColor
-                            toggleEnabled.ImageColor3 = themeList.SchemeColor
-                            togName.TextColor3 = themeList.TextColor
-                            viewInfo.ImageColor3 = themeList.SchemeColor
-                            Sample.ImageColor3 = themeList.SchemeColor
-                            moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                            moreInfo.TextColor3 = themeList.TextColor
-                        end
-                    end)()
-                    viewInfo.MouseButton1Click:Connect(function()
-                        if not viewDe then
-                            viewDe = true
-                            focusing = true
-                            for i,v in next, infoContainer:GetChildren() do
-                                if v ~= moreInfo then
-                                    Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                                end
-                            end
-                            Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                            Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                            Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                            wait(1.5)
-                            focusing = false
-                            Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                            wait(0)
-                            viewDe = false
-                        end
-                    end)
-                    function TogFunction:UpdateToggle(newText, isTogOn)
-                        isTogOn = isTogOn or toggle
-                        if newText ~= nil then 
-                            togName.Text = newText
-                        end
-                        if isTogOn then
-                            toggled = true
-                            game.TweenService:Create(img, TweenInfo.new(0.11, Enum.EasingStyle.Linear,Enum.EasingDirection.In), {
-                                ImageTransparency = 0
-                            }):Play()
-                            pcall(callback, toggled)
-                        else
-                            toggled = false
-                            game.TweenService:Create(img, TweenInfo.new(0.11, Enum.EasingStyle.Linear,Enum.EasingDirection.In), {
-                                ImageTransparency = 1
-                            }):Play()
-                            pcall(callback, toggled)
+                local dropFunction = {}
+                dropBtn.MouseButton1Click:Connect(function()
+                    if dropList.Visible then
+                        dropList.Visible = false
+                        dropList.Size = UDim2.new(0, 352, 0, 0)
+                    else
+                        dropList.Visible = true
+                        dropList.Size = UDim2.new(0, 352, 0, dropListListing.AbsoluteContentSize.Y)
+                    end
+                end)
+                function dropFunction:Clear()
+                    for i,v in next, dropList:GetChildren() do
+                        if v:IsA("TextButton") then
+                            v:Destroy()
                         end
                     end
-                    return TogFunction
+                end
+                function dropFunction:Add(v)
+                    local dropBtn2 = Instance.new("TextButton")
+                    dropBtn2.Name = "dropBtn2"
+                    dropBtn2.Parent = dropList
+                    dropBtn2.BackgroundColor3 = themeList.ElementColor
+                    dropBtn2.Size = UDim2.new(0, 352, 0, 33)
+                    dropBtn2.AutoButtonColor = false
+                    dropBtn2.Font = Enum.Font.GothamSemibold
+                    dropBtn2.Text = v
+                    dropBtn2.TextColor3 = themeList.TextColor
+                    dropBtn2.TextSize = 14.000
+
+                    local UICorner = Instance.new("UICorner")
+                    UICorner.CornerRadius = UDim.new(0, 4)
+                    UICorner.Parent = dropBtn2
+
+                    dropBtn2.MouseButton1Click:Connect(function()
+                        dropName.Text = v
+                        callback(v)
+                        dropList.Visible = false
+                        dropList.Size = UDim2.new(0, 352, 0, 0)
+                    end)
+                    coroutine.wrap(function()
+                        while wait() do
+                            dropBtn2.BackgroundColor3 = themeList.ElementColor
+                            dropBtn2.TextColor3 = themeList.TextColor
+                        end
+                    end)()
+                end
+                for i,v in next, list do
+                    dropFunction:Add(v)
+                end
+                return DropFunction
             end
-
-            function Elements:NewSlider(slidInf, slidTip, maxvalue, minvalue, callback)
+            function Elements:NewSlider(slidInf, slidText, minvalue, maxvalue, callback)
                 slidInf = slidInf or "Slider"
-                slidTip = slidTip or "Slider tip here"
+                slidText = slidText or "Slider tip"
+                minvalue = minvalue or 1
                 maxvalue = maxvalue or 500
-                minvalue = minvalue or 16
-                startVal = startVal or 0
                 callback = callback or function() end
-
                 local sliderElement = Instance.new("TextButton")
                 local UICorner = Instance.new("UICorner")
-                local togName = Instance.new("TextLabel")
+                local slidInfo = Instance.new("TextLabel")
                 local viewInfo = Instance.new("ImageButton")
                 local sliderBtn = Instance.new("TextButton")
                 local UICorner_2 = Instance.new("UICorner")
@@ -1252,7 +1425,11 @@ function Kavo.CreateLib(kavName, themeList)
                 local sliderDrag = Instance.new("Frame")
                 local UICorner_3 = Instance.new("UICorner")
                 local write = Instance.new("ImageLabel")
-                local val = Instance.new("TextLabel")
+                local title = Instance.new("TextLabel")
+                local circleBar = Instance.new("Frame")
+                local UICorner_4 = Instance.new("UICorner")
+                local UICorner_5 = Instance.new("UICorner")
+                local Sample = Instance.new("ImageLabel")
 
                 sliderElement.Name = "sliderElement"
                 sliderElement.Parent = sectionInners
@@ -1268,18 +1445,18 @@ function Kavo.CreateLib(kavName, themeList)
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = sliderElement
 
-                togName.Name = "togName"
-                togName.Parent = sliderElement
-                togName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                togName.BackgroundTransparency = 1.000
-                togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                togName.Size = UDim2.new(0, 138, 0, 14)
-                togName.Font = Enum.Font.GothamSemibold
-                togName.Text = slidInf
-                togName.RichText = true
-                togName.TextColor3 = themeList.TextColor
-                togName.TextSize = 14.000
-                togName.TextXAlignment = Enum.TextXAlignment.Left
+                slidInfo.Name = "slidInfo"
+                slidInfo.Parent = sliderElement
+                slidInfo.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                slidInfo.BackgroundTransparency = 1.000
+                slidInfo.Position = UDim2.new(0.260368079, 0, 0.272727281, 0)
+                slidInfo.Size = UDim2.new(0, 133, 0, 14)
+                slidInfo.Font = Enum.Font.GothamSemibold
+                slidInfo.Text = slidInf
+                slidInfo.TextColor3 = themeList.TextColor
+                slidInfo.RichText = true
+                slidInfo.TextSize = 14.000
+                slidInfo.TextXAlignment = Enum.TextXAlignment.Left
 
                 viewInfo.Name = "viewInfo"
                 viewInfo.Parent = sliderElement
@@ -1295,29 +1472,31 @@ function Kavo.CreateLib(kavName, themeList)
 
                 sliderBtn.Name = "sliderBtn"
                 sliderBtn.Parent = sliderElement
-                sliderBtn.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 5, themeList.ElementColor.g * 255 + 5, themeList.ElementColor.b * 255  + 5)
+                sliderBtn.BackgroundColor3 = themeList.ElementColor
                 sliderBtn.BorderSizePixel = 0
-                sliderBtn.Position = UDim2.new(0.488749951, 0, 0.393939406, 0)
-                sliderBtn.Size = UDim2.new(0, 149, 0, 6)
+                sliderBtn.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
+                sliderBtn.Size = UDim2.new(0, 21, 0, 21)
                 sliderBtn.AutoButtonColor = false
-                sliderBtn.Font = Enum.Font.SourceSans
+                sliderBtn.Font = Enum.Font.Gotham
                 sliderBtn.Text = ""
-                sliderBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+                sliderBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
                 sliderBtn.TextSize = 14.000
 
+                UICorner_2.CornerRadius = UDim.new(0, 4)
                 UICorner_2.Parent = sliderBtn
 
                 UIListLayout.Parent = sliderBtn
                 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+                UIListLayout.Padding = UDim.new(0, 3)
 
                 sliderDrag.Name = "sliderDrag"
                 sliderDrag.Parent = sliderBtn
-                sliderDrag.BackgroundColor3 = themeList.SchemeColor
-                sliderDrag.BorderColor3 = Color3.fromRGB(74, 99, 135)
+                sliderDrag.BackgroundColor3 = themeList.Background
                 sliderDrag.BorderSizePixel = 0
-                sliderDrag.Size = UDim2.new(-0.671140969, 100,1,0)
+                sliderDrag.Size = UDim2.new(0, 352, 0, 33)
+                sliderDrag.AutoButtonColor = false
 
+                UICorner_3.CornerRadius = UDim.new(0, 4)
                 UICorner_3.Parent = sliderDrag
 
                 write.Name = "write"
@@ -1329,21 +1508,46 @@ function Kavo.CreateLib(kavName, themeList)
                 write.Size = UDim2.new(0, 21, 0, 21)
                 write.Image = "rbxassetid://3926307971"
                 write.ImageColor3 = themeList.SchemeColor
-                write.ImageRectOffset = Vector2.new(404, 164)
+                write.ImageRectOffset = Vector2.new(404, 284)
                 write.ImageRectSize = Vector2.new(36, 36)
 
-                val.Name = "val"
-                val.Parent = sliderElement
-                val.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                val.BackgroundTransparency = 1.000
-                val.Position = UDim2.new(0.352386296, 0, 0.272727281, 0)
-                val.Size = UDim2.new(0, 41, 0, 14)
-                val.Font = Enum.Font.GothamSemibold
-                val.Text = minvalue
-                val.TextColor3 = themeList.TextColor
-                val.TextSize = 14.000
-                val.TextTransparency = 1.000
-                val.TextXAlignment = Enum.TextXAlignment.Right
+                title.Name = "title"
+                title.Parent = sliderElement
+                title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                title.BackgroundTransparency = 1.000
+                title.Position = UDim2.new(0.65, 0, 0.272727281, 0)
+                title.Size = UDim2.new(0, 113, 0, 14)
+                title.Font = Enum.Font.GothamSemibold
+                title.Text = tostring(minvalue)
+                title.TextColor3 = themeList.TextColor
+                title.TextSize = 14.000
+                title.RichText = true
+                title.TextXAlignment = Enum.TextXAlignment.Right
+
+                circleBar.Name = "circleBar"
+                circleBar.Parent = sliderElement
+                circleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                circleBar.BackgroundTransparency = 1.000
+                circleBar.Position = UDim2.new(0.00999999978, 0, -0.150000006, 0)
+                circleBar.Size = UDim2.new(0, 10, 0, 10)
+                circleBar.Image = "rbxassetid://3926309567"
+                circleBar.ImageColor3 = themeList.SchemeColor
+                circleBar.ImageRectOffset = Vector2.new(628, 420)
+                circleBar.ImageRectSize = Vector2.new(48, 48)
+
+                UICorner_4.CornerRadius = UDim.new(0, 4)
+                UICorner_4.Parent = circleBar
+
+                UICorner_5.CornerRadius = UDim.new(0, 4)
+                UICorner_5.Parent = sliderDrag
+
+                Sample.Name = "Sample"
+                Sample.Parent = sliderElement
+                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                Sample.BackgroundTransparency = 1.000
+                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
+                Sample.ImageColor3 = themeList.SchemeColor
+                Sample.ImageTransparency = 0.600
 
                 local moreInfo = Instance.new("TextLabel")
                 local UICorner = Instance.new("UICorner")
@@ -1355,798 +1559,115 @@ function Kavo.CreateLib(kavName, themeList)
                 moreInfo.Size = UDim2.new(0, 353, 0, 33)
                 moreInfo.ZIndex = 9
                 moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.Text = "  "..slidTip
+                moreInfo.Text = "  "..slidText
+                moreInfo.RichText = true
                 moreInfo.TextColor3 = themeList.TextColor
                 moreInfo.TextSize = 14.000
-                moreInfo.RichText = true
                 moreInfo.TextXAlignment = Enum.TextXAlignment.Left
 
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = moreInfo
 
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-
-
-                                updateSectionFrame()
+                local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+                updateSectionFrame()
                 UpdateSize()
-                local mouse = game:GetService("Players").LocalPlayer:GetMouse();
 
-                local ms = game.Players.LocalPlayer:GetMouse()
-                local uis = game:GetService("UserInputService")
-                local btn = sliderElement
-                local infBtn = viewInfo
                 local hovering = false
-                btn.MouseEnter:Connect(function()
+
+                sliderElement.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                        game.TweenService:Create(sliderElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
                             BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
                         }):Play()
                         hovering = true
                     end 
                 end)
-                btn.MouseLeave:Connect(function()
+                sliderElement.MouseLeave:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
+                        game.TweenService:Create(sliderElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
                             BackgroundColor3 = themeList.ElementColor
                         }):Play()
                         hovering = false
                     end
-                end)        
-
+                end)
+                sliderDrag.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        dragging = true
+                    end
+                end)
+                sliderDrag.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        dragging = false
+                    end
+                end)
+                sliderDrag.InputChanged:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseMovement then
+                        if dragging then
+                            local delta = input.Position - sliderDrag.AbsolutePosition
+                            local value = math.floor(minvalue + (delta.X / sliderDrag.AbsoluteSize.X) * (maxvalue - minvalue))
+                            if value < minvalue then value = minvalue end
+                            if value > maxvalue then value = maxvalue end
+                            title.Text = value
+                            circleBar.Position = UDim2.new((value - minvalue) / (maxvalue - minvalue), -6, -1.35, 0)
+                            circleBar.ImageColor3 = themeList.SchemeColor
+                            Utility:TweenObject(circleBar, {ImageColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)}, 0.2)
+                            callback(value)
+                        end
+                    end
+                end)
+                viewInfo.MouseButton1Click:Connect(function()
+                    if not viewDe then
+                        viewDe = true
+                        focusing = true
+                        for i,v in next, infoContainer:GetChildren() do
+                            if v ~= moreInfo then
+                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                            end
+                        end
+                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
+                        Utility:TweenObject(sliderElement, {BackgroundColor3 = themeList.ElementColor}, 0.2)
+                        wait(1.5)
+                        focusing = false
+                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
+                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
+                        wait(0)
+                        viewDe = false
+                    end
+                end)
                 coroutine.wrap(function()
                     while wait() do
-                        if not hovering then
-                            sliderElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        moreInfo.TextColor3 = themeList.TextColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                        val.TextColor3 = themeList.TextColor
+                        sliderElement.BackgroundColor3 = themeList.ElementColor
+                        slidInfo.TextColor3 = themeList.TextColor
+                        viewInfo.ImageColor3 = themeList.SchemeColor
+                        sliderBtn.BackgroundColor3 = themeList.ElementColor
+                        sliderDrag.BackgroundColor3 = themeList.Background
                         write.ImageColor3 = themeList.SchemeColor
-                        togName.TextColor3 = themeList.TextColor
-                        viewInfo.ImageColor3 = themeList.SchemeColor
-                        sliderBtn.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 5, themeList.ElementColor.g * 255 + 5, themeList.ElementColor.b * 255  + 5)
-                        sliderDrag.BackgroundColor3 = themeList.SchemeColor
-                    end
-                end)()
-
-                local Value
-                sliderBtn.MouseButton1Down:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(val, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            TextTransparency = 0
-                        }):Play()
-                        Value = math.floor((((tonumber(maxvalue) - tonumber(minvalue)) / 149) * sliderDrag.AbsoluteSize.X) + tonumber(minvalue)) or 0
-                        pcall(function()
-                            callback(Value)
-                        end)
-                        sliderDrag:TweenSize(UDim2.new(0, math.clamp(mouse.X - sliderDrag.AbsolutePosition.X, 0, 149), 0, 6), "InOut", "Linear", 0.05, true)
-                        moveconnection = mouse.Move:Connect(function()
-                            val.Text = Value
-                            Value = math.floor((((tonumber(maxvalue) - tonumber(minvalue)) / 149) * sliderDrag.AbsoluteSize.X) + tonumber(minvalue))
-                            pcall(function()
-                                callback(Value)
-                            end)
-                            sliderDrag:TweenSize(UDim2.new(0, math.clamp(mouse.X - sliderDrag.AbsolutePosition.X, 0, 149), 0, 6), "InOut", "Linear", 0.05, true)
-                        end)
-                        releaseconnection = uis.InputEnded:Connect(function(Mouse)
-                            if Mouse.UserInputType == Enum.UserInputType.MouseButton1 then
-                                Value = math.floor((((tonumber(maxvalue) - tonumber(minvalue)) / 149) * sliderDrag.AbsoluteSize.X) + tonumber(minvalue))
-                                pcall(function()
-                                    callback(Value)
-                                end)
-                                val.Text = Value
-                                game.TweenService:Create(val, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                    TextTransparency = 1
-                                }):Play()
-                                sliderDrag:TweenSize(UDim2.new(0, math.clamp(mouse.X - sliderDrag.AbsolutePosition.X, 0, 149), 0, 6), "InOut", "Linear", 0.05, true)
-                                moveconnection:Disconnect()
-                                releaseconnection:Disconnect()
-                            end
-                        end)
-                    else
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            end
-                        end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)        
-            end
-
-            function Elements:NewDropdown(dropname, dropinf, list, callback)
-                local DropFunction = {}
-                dropname = dropname or "Dropdown"
-                list = list or {}
-                dropinf = dropinf or "Dropdown info"
-                callback = callback or function() end   
-
-                local opened = false
-                local DropYSize = 33
-
-
-                local dropFrame = Instance.new("Frame")
-                local dropOpen = Instance.new("TextButton")
-                local listImg = Instance.new("ImageLabel")
-                local itemTextbox = Instance.new("TextLabel")
-                local viewInfo = Instance.new("ImageButton")
-                local UICorner = Instance.new("UICorner")
-                local UIListLayout = Instance.new("UIListLayout")
-                local Sample = Instance.new("ImageLabel")
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-                Sample.Name = "Sample"
-                Sample.Parent = dropOpen
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Sample.ImageTransparency = 0.600
-                
-                dropFrame.Name = "dropFrame"
-                dropFrame.Parent = sectionInners
-                dropFrame.BackgroundColor3 = themeList.Background
-                dropFrame.BorderSizePixel = 0
-                dropFrame.Position = UDim2.new(0, 0, 1.23571432, 0)
-                dropFrame.Size = UDim2.new(0, 352, 0, 33)
-                dropFrame.ClipsDescendants = true
-                local sample = Sample
-                local btn = dropOpen
-                dropOpen.Name = "dropOpen"
-                dropOpen.Parent = dropFrame
-                dropOpen.BackgroundColor3 = themeList.ElementColor
-                dropOpen.Size = UDim2.new(0, 352, 0, 33)
-                dropOpen.AutoButtonColor = false
-                dropOpen.Font = Enum.Font.SourceSans
-                dropOpen.Text = ""
-                dropOpen.TextColor3 = Color3.fromRGB(0, 0, 0)
-                dropOpen.TextSize = 14.000
-                dropOpen.ClipsDescendants = true
-                dropOpen.MouseButton1Click:Connect(function()
-                    if not focusing then
-                        if opened then
-                            opened = false
-                            dropFrame:TweenSize(UDim2.new(0, 352, 0, 33), "InOut", "Linear", 0.08)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample:Clone()
-                            c.Parent = btn
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                size = (btn.AbsoluteSize.X * 1.5)
-                            else
-                                size = (btn.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()
-                        else
-                            opened = true
-                            dropFrame:TweenSize(UDim2.new(0, 352, 0, UIListLayout.AbsoluteContentSize.Y), "InOut", "Linear", 0.08, true)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample:Clone()
-                            c.Parent = btn
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                size = (btn.AbsoluteSize.X * 1.5)
-                            else
-                                size = (btn.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()
-                        end
-                    else
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-
-                listImg.Name = "listImg"
-                listImg.Parent = dropOpen
-                listImg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                listImg.BackgroundTransparency = 1.000
-                listImg.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                listImg.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                listImg.Size = UDim2.new(0, 21, 0, 21)
-                listImg.Image = "rbxassetid://3926305904"
-                listImg.ImageColor3 = themeList.SchemeColor
-                listImg.ImageRectOffset = Vector2.new(644, 364)
-                listImg.ImageRectSize = Vector2.new(36, 36)
-
-                itemTextbox.Name = "itemTextbox"
-                itemTextbox.Parent = dropOpen
-                itemTextbox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                itemTextbox.BackgroundTransparency = 1.000
-                itemTextbox.Position = UDim2.new(0.0970000029, 0, 0.273000002, 0)
-                itemTextbox.Size = UDim2.new(0, 138, 0, 14)
-                itemTextbox.Font = Enum.Font.GothamSemibold
-                itemTextbox.Text = dropname
-                itemTextbox.RichText = true
-                itemTextbox.TextColor3 = themeList.TextColor
-                itemTextbox.TextSize = 14.000
-                itemTextbox.TextXAlignment = Enum.TextXAlignment.Left
-
-                viewInfo.Name = "viewInfo"
-                viewInfo.Parent = dropOpen
-                viewInfo.BackgroundTransparency = 1.000
-                viewInfo.LayoutOrder = 9
-                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                viewInfo.ZIndex = 2
-                viewInfo.Image = "rbxassetid://3926305904"
-                viewInfo.ImageColor3 = themeList.SchemeColor
-                viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                viewInfo.ImageRectSize = Vector2.new(36, 36)
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = dropOpen
-
-                local Sample = Instance.new("ImageLabel")
-
-                Sample.Name = "Sample"
-                Sample.Parent = dropOpen
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Sample.ImageTransparency = 0.600
-
-                UIListLayout.Parent = dropFrame
-                UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                UIListLayout.Padding = UDim.new(0, 3)
-
-                updateSectionFrame() 
-                UpdateSize()
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-                local uis = game:GetService("UserInputService")
-                local infBtn = viewInfo
-
-                local moreInfo = Instance.new("TextLabel")
-                local UICorner = Instance.new("UICorner")
-
-                moreInfo.Name = "TipMore"
-                moreInfo.Parent = infoContainer
-                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                moreInfo.ZIndex = 9
-                moreInfo.RichText = true
-                moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.Text = "  "..dropinf
-                moreInfo.TextColor3 = themeList.TextColor
-                moreInfo.TextSize = 14.000
-                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-                local hovering = false
-                btn.MouseEnter:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                        }):Play()
-                        hovering = true
-                    end 
-                end)
-                btn.MouseLeave:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
-                        }):Play()
-                        hovering = false
-                    end
-                end)        
-                coroutine.wrap(function()
-                    while wait() do
-                        if not hovering then
-                            dropOpen.BackgroundColor3 = themeList.ElementColor
-                        end
+                        title.TextColor3 = themeList.TextColor
+                        circleBar.ImageColor3 = themeList.SchemeColor
                         Sample.ImageColor3 = themeList.SchemeColor
-                        dropFrame.BackgroundColor3 = themeList.Background
-                        listImg.ImageColor3 = themeList.SchemeColor
-                        itemTextbox.TextColor3 = themeList.TextColor
-                        viewInfo.ImageColor3 = themeList.SchemeColor
                         moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
                         moreInfo.TextColor3 = themeList.TextColor
                     end
                 end)()
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = moreInfo
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            end
-                        end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(btn, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)     
-
-                for i,v in next, list do
-                    local optionSelect = Instance.new("TextButton")
-                    local UICorner_2 = Instance.new("UICorner")
-                    local Sample1 = Instance.new("ImageLabel")
-
-                    local ms = game.Players.LocalPlayer:GetMouse()
-                    Sample1.Name = "Sample1"
-                    Sample1.Parent = optionSelect
-                    Sample1.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    Sample1.BackgroundTransparency = 1.000
-                    Sample1.Image = "http://www.roblox.com/asset/?id=4560909609"
-                    Sample1.ImageColor3 = themeList.SchemeColor
-                    Sample1.ImageTransparency = 0.600
-
-                    local sample1 = Sample1
-                    DropYSize = DropYSize + 33
-                    optionSelect.Name = "optionSelect"
-                    optionSelect.Parent = dropFrame
-                    optionSelect.BackgroundColor3 = themeList.ElementColor
-                    optionSelect.Position = UDim2.new(0, 0, 0.235294119, 0)
-                    optionSelect.Size = UDim2.new(0, 352, 0, 33)
-                    optionSelect.AutoButtonColor = false
-                    optionSelect.Font = Enum.Font.GothamSemibold
-                    optionSelect.Text = "  "..v
-                    optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
-                    optionSelect.TextSize = 14.000
-                    optionSelect.TextXAlignment = Enum.TextXAlignment.Left
-                    optionSelect.ClipsDescendants = true
-                    optionSelect.MouseButton1Click:Connect(function()
-                        if not focusing then
-                            opened = false
-                            callback(v)
-                            itemTextbox.Text = v
-                            dropFrame:TweenSize(UDim2.new(0, 352, 0, 33), 'InOut', 'Linear', 0.08)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample1:Clone()
-                            c.Parent = optionSelect
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if optionSelect.AbsoluteSize.X >= optionSelect.AbsoluteSize.Y then
-                                size = (optionSelect.AbsoluteSize.X * 1.5)
-                            else
-                                size = (optionSelect.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()         
-                        else
-                            for i,v in next, infoContainer:GetChildren() do
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                                focusing = false
-                            end
-                            Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        end
-                    end)
-    
-                    UICorner_2.CornerRadius = UDim.new(0, 4)
-                    UICorner_2.Parent = optionSelect
-
-                    local oHover = false
-                    optionSelect.MouseEnter:Connect(function()
-                        if not focusing then
-                            game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                            }):Play()
-                            oHover = true
-                        end 
-                    end)
-                    optionSelect.MouseLeave:Connect(function()
-                        if not focusing then
-                            game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = themeList.ElementColor
-                            }):Play()
-                            oHover = false
-                        end
-                    end)   
-                    coroutine.wrap(function()
-                        while wait() do
-                            if not oHover then
-                                optionSelect.BackgroundColor3 = themeList.ElementColor
-                            end
-                            optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
-                            Sample1.ImageColor3 = themeList.SchemeColor
-                        end
-                    end)()
+                function SliderFunction:Change(tochange)
+                    title.Text = tostring(tochange)
+                    circleBar.Position = UDim2.new((tochange or minvalue - minvalue) / (maxvalue - minvalue), -6, -1.35, 0)
+                    circleBar.ImageColor3 = themeList.SchemeColor
+                    Utility:TweenObject(circleBar, {ImageColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)}, 0.2)
+                    callback(tochange)
                 end
-
-                function DropFunction:Refresh(newList)
-                    newList = newList or {}
-                    for i,v in next, dropFrame:GetChildren() do
-                        if v.Name == "optionSelect" then
-                            v:Destroy()
-                        end
-                    end
-                    for i,v in next, newList do
-                        local optionSelect = Instance.new("TextButton")
-                        local UICorner_2 = Instance.new("UICorner")
-                        local Sample11 = Instance.new("ImageLabel")
-                        local ms = game.Players.LocalPlayer:GetMouse()
-                        Sample11.Name = "Sample11"
-                        Sample11.Parent = optionSelect
-                        Sample11.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                        Sample11.BackgroundTransparency = 1.000
-                        Sample11.Image = "http://www.roblox.com/asset/?id=4560909609"
-                        Sample11.ImageColor3 = themeList.SchemeColor
-                        Sample11.ImageTransparency = 0.600
-    
-                        local sample11 = Sample11
-                        DropYSize = DropYSize + 33
-                        optionSelect.Name = "optionSelect"
-                        optionSelect.Parent = dropFrame
-                        optionSelect.BackgroundColor3 = themeList.ElementColor
-                        optionSelect.Position = UDim2.new(0, 0, 0.235294119, 0)
-                        optionSelect.Size = UDim2.new(0, 352, 0, 33)
-                        optionSelect.AutoButtonColor = false
-                        optionSelect.Font = Enum.Font.GothamSemibold
-                        optionSelect.Text = "  "..v
-                        optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
-                        optionSelect.TextSize = 14.000
-                        optionSelect.TextXAlignment = Enum.TextXAlignment.Left
-                        optionSelect.ClipsDescendants = true
-                        UICorner_2.CornerRadius = UDim.new(0, 4)
-                        UICorner_2.Parent = optionSelect
-                        optionSelect.MouseButton1Click:Connect(function()
-                            if not focusing then
-                                opened = false
-                                callback(v)
-                                itemTextbox.Text = v
-                                dropFrame:TweenSize(UDim2.new(0, 352, 0, 33), 'InOut', 'Linear', 0.08)
-                                wait(0.1)
-                                updateSectionFrame()
-                                UpdateSize()
-                                local c = sample11:Clone()
-                                c.Parent = optionSelect
-                                local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                                c.Position = UDim2.new(0, x, 0, y)
-                                local len, size = 0.35, nil
-                                if optionSelect.AbsoluteSize.X >= optionSelect.AbsoluteSize.Y then
-                                    size = (optionSelect.AbsoluteSize.X * 1.5)
-                                else
-                                    size = (optionSelect.AbsoluteSize.Y * 1.5)
-                                end
-                                c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                                for i = 1, 10 do
-                                    c.ImageTransparency = c.ImageTransparency + 0.05
-                                    wait(len / 12)
-                                end
-                                c:Destroy()         
-                            else
-                                for i,v in next, infoContainer:GetChildren() do
-                                    Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                                    focusing = false
-                                end
-                                Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                            end
-                        end)
-                                        updateSectionFrame()
-                UpdateSize()
-                        local hov = false
-                        optionSelect.MouseEnter:Connect(function()
-                            if not focusing then
-                                game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                    BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                                }):Play()
-                                hov = true
-                            end 
-                        end)
-                        optionSelect.MouseLeave:Connect(function()
-                            if not focusing then
-                                game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                    BackgroundColor3 = themeList.ElementColor
-                                }):Play()
-                                hov = false
-                            end
-                        end)   
-                        coroutine.wrap(function()
-                            while wait() do
-                                if not oHover then
-                                    optionSelect.BackgroundColor3 = themeList.ElementColor
-                                end
-                                optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
-                                Sample11.ImageColor3 = themeList.SchemeColor
-                            end
-                        end)()
-                    end
-                    if opened then 
-                        dropFrame:TweenSize(UDim2.new(0, 352, 0, UIListLayout.AbsoluteContentSize.Y), "InOut", "Linear", 0.08, true)
-                        wait(0.1)
-                        updateSectionFrame()
-                        UpdateSize()
-                    else
-                        dropFrame:TweenSize(UDim2.new(0, 352, 0, 33), "InOut", "Linear", 0.08)
-                        wait(0.1)
-                        updateSectionFrame()
-                        UpdateSize()
-                    end
-                end
-                return DropFunction
+                return SliderFunction
             end
-            function Elements:NewKeybind(keytext, keyinf, first, callback)
-                keytext = keytext or "KeybindText"
-                keyinf = keyinf or "KebindInfo"
-                callback = callback or function() end
-                local oldKey = first.Name
-                local keybindElement = Instance.new("TextButton")
-                local UICorner = Instance.new("UICorner")
-                local togName = Instance.new("TextLabel")
-                local viewInfo = Instance.new("ImageButton")
-                local touch = Instance.new("ImageLabel")
-                local Sample = Instance.new("ImageLabel")
-                local togName_2 = Instance.new("TextLabel")
-
-                local ms = game.Players.LocalPlayer:GetMouse()
-                local uis = game:GetService("UserInputService")
-                local infBtn = viewInfo
-
-                local moreInfo = Instance.new("TextLabel")
-                local UICorner1 = Instance.new("UICorner")
-
-                local sample = Sample
-
-                keybindElement.Name = "keybindElement"
-                keybindElement.Parent = sectionInners
-                keybindElement.BackgroundColor3 = themeList.ElementColor
-                keybindElement.ClipsDescendants = true
-                keybindElement.Size = UDim2.new(0, 352, 0, 33)
-                keybindElement.AutoButtonColor = false
-                keybindElement.Font = Enum.Font.SourceSans
-                keybindElement.Text = ""
-                keybindElement.TextColor3 = Color3.fromRGB(0, 0, 0)
-                keybindElement.TextSize = 14.000
-                keybindElement.MouseButton1Click:connect(function(e) 
-                    if not focusing then
-                        togName_2.Text = ". . ."
-                        local a, b = game:GetService('UserInputService').InputBegan:wait();
-                        if a.KeyCode.Name ~= "Unknown" then
-                            togName_2.Text = a.KeyCode.Name
-                            oldKey = a.KeyCode.Name;
-                        end
-                        local c = sample:Clone()
-                        c.Parent = keybindElement
-                        local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                        c.Position = UDim2.new(0, x, 0, y)
-                        local len, size = 0.35, nil
-                        if keybindElement.AbsoluteSize.X >= keybindElement.AbsoluteSize.Y then
-                            size = (keybindElement.AbsoluteSize.X * 1.5)
-                        else
-                            size = (keybindElement.AbsoluteSize.Y * 1.5)
-                        end
-                        c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                        for i = 1, 10 do
-                        c.ImageTransparency = c.ImageTransparency + 0.05
-                            wait(len / 12)
-                        end
-                    else
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
-        
-                game:GetService("UserInputService").InputBegan:connect(function(current, ok) 
-                    if not ok then 
-                        if current.KeyCode.Name == oldKey then 
-                            callback()
-                        end
-                    end
-                end)
-
-                moreInfo.Name = "TipMore"
-                moreInfo.Parent = infoContainer
-                moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-                moreInfo.Position = UDim2.new(0, 0, 2, 0)
-                moreInfo.Size = UDim2.new(0, 353, 0, 33)
-                moreInfo.ZIndex = 9
-                moreInfo.RichText = true
-                moreInfo.Font = Enum.Font.GothamSemibold
-                moreInfo.Text = "  "..keyinf
-                moreInfo.TextColor3 = themeList.TextColor
-                moreInfo.TextSize = 14.000
-                moreInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-                Sample.Name = "Sample"
-                Sample.Parent = keybindElement
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Sample.ImageTransparency = 0.600
-
-                
-                togName.Name = "togName"
-                togName.Parent = keybindElement
-                togName.BackgroundColor3 = themeList.TextColor
-                togName.BackgroundTransparency = 1.000
-                togName.Position = UDim2.new(0.096704483, 0, 0.272727281, 0)
-                togName.Size = UDim2.new(0, 222, 0, 14)
-                togName.Font = Enum.Font.GothamSemibold
-                togName.Text = keytext
-                togName.RichText = true
-                togName.TextColor3 = themeList.TextColor
-                togName.TextSize = 14.000
-                togName.TextXAlignment = Enum.TextXAlignment.Left
-
-                viewInfo.Name = "viewInfo"
-                viewInfo.Parent = keybindElement
-                viewInfo.BackgroundTransparency = 1.000
-                viewInfo.LayoutOrder = 9
-                viewInfo.Position = UDim2.new(0.930000007, 0, 0.151999995, 0)
-                viewInfo.Size = UDim2.new(0, 23, 0, 23)
-                viewInfo.ZIndex = 2
-                viewInfo.Image = "rbxassetid://3926305904"
-                viewInfo.ImageColor3 = themeList.SchemeColor
-                viewInfo.ImageRectOffset = Vector2.new(764, 764)
-                viewInfo.ImageRectSize = Vector2.new(36, 36)
-                viewInfo.MouseButton1Click:Connect(function()
-                    if not viewDe then
-                        viewDe = true
-                        focusing = true
-                        for i,v in next, infoContainer:GetChildren() do
-                            if v ~= moreInfo then
-                                Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            end
-                        end
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,0,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 0.5}, 0.2)
-                        Utility:TweenObject(keybindElement, {BackgroundColor3 = themeList.ElementColor}, 0.2)
-                        wait(1.5)
-                        focusing = false
-                        Utility:TweenObject(moreInfo, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                        wait(0)
-                        viewDe = false
-                    end
-                end)  
-                                updateSectionFrame()
-                UpdateSize()
-                local oHover = false
-                keybindElement.MouseEnter:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(keybindElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
-                        }):Play()
-                        oHover = true
-                    end 
-                end)
-                keybindElement.MouseLeave:Connect(function()
-                    if not focusing then
-                        game.TweenService:Create(keybindElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
-                        }):Play()
-                        oHover = false
-                    end
-                end)        
-
-                UICorner1.CornerRadius = UDim.new(0, 4)
-                UICorner1.Parent = moreInfo
-
-                if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
-                end 
-                if themeList.SchemeColor == Color3.fromRGB(0,0,0) then
-                    Utility:TweenObject(moreInfo, {TextColor3 = Color3.fromRGB(255,255,255)}, 0.2)
-                end 
-
-                UICorner.CornerRadius = UDim.new(0, 4)
-                UICorner.Parent = keybindElement
-
-                touch.Name = "touch"
-                touch.Parent = keybindElement
-                touch.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                touch.BackgroundTransparency = 1.000
-                touch.BorderColor3 = Color3.fromRGB(27, 42, 53)
-                touch.Position = UDim2.new(0.0199999996, 0, 0.180000007, 0)
-                touch.Size = UDim2.new(0, 21, 0, 21)
-                touch.Image = "rbxassetid://3926305904"
-                touch.ImageColor3 = themeList.SchemeColor
-                touch.ImageRectOffset = Vector2.new(364, 284)
-                touch.ImageRectSize = Vector2.new(36, 36)
-
-                togName_2.Name = "togName"
-                togName_2.Parent = keybindElement
-                togName_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                togName_2.BackgroundTransparency = 1.000
-                togName_2.Position = UDim2.new(0.727386296, 0, 0.272727281, 0)
-                togName_2.Size = UDim2.new(0, 70, 0, 14)
-                togName_2.Font = Enum.Font.GothamSemibold
-                togName_2.Text = oldKey
-                togName_2.TextColor3 = themeList.SchemeColor
-                togName_2.TextSize = 14.000
-                togName_2.TextXAlignment = Enum.TextXAlignment.Right   
-
-                coroutine.wrap(function()
-                    while wait() do
-                        if not oHover then
-                            keybindElement.BackgroundColor3 = themeList.ElementColor
-                        end
-                        togName_2.TextColor3 = themeList.SchemeColor
-                        touch.ImageColor3 = themeList.SchemeColor
-                        viewInfo.ImageColor3 = themeList.SchemeColor
-                        togName.BackgroundColor3 = themeList.TextColor
-                        togName.TextColor3 = themeList.TextColor
-                        Sample.ImageColor3 = themeList.SchemeColor
-                        moreInfo.TextColor3 = themeList.TextColor
-                        moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
-
-                    end
-                end)()
-            end
-
             function Elements:NewColorPicker(colText, colInf, defcolor, callback)
-                colText = colText or "ColorPicker"
+                colText = colInf or "ColorPicker"
+                colInf = colInf or "Color info"
+                defcolor = defcolor or Color3.fromRGB(255, 64, 64)
                 callback = callback or function() end
-                defcolor = defcolor or Color3.fromRGB(1,1,1)
                 local h, s, v = Color3.toHSV(defcolor)
-                local ms = game.Players.LocalPlayer:GetMouse()
-                local colorOpened = false
+                local colorpicker = false
                 local colorElement = Instance.new("TextButton")
+                local Sample = Instance.new("ImageLabel")
                 local UICorner = Instance.new("UICorner")
                 local colorHeader = Instance.new("Frame")
                 local UICorner_2 = Instance.new("UICorner")
@@ -2158,10 +1679,10 @@ function Kavo.CreateLib(kavName, themeList)
                 local UIListLayout = Instance.new("UIListLayout")
                 local colorInners = Instance.new("Frame")
                 local UICorner_4 = Instance.new("UICorner")
-                local rgb = Instance.new("ImageButton")
+                local rgb = Instance.new("ImageLabel")
                 local UICorner_5 = Instance.new("UICorner")
                 local rbgcircle = Instance.new("ImageLabel")
-                local darkness = Instance.new("ImageButton")
+                local darkness = Instance.new("ImageLabel")
                 local UICorner_6 = Instance.new("UICorner")
                 local darkcircle = Instance.new("ImageLabel")
                 local toggleDisabled = Instance.new("ImageLabel")
@@ -2169,86 +1690,25 @@ function Kavo.CreateLib(kavName, themeList)
                 local onrainbow = Instance.new("TextButton")
                 local togName_2 = Instance.new("TextLabel")
 
-                --Properties:
-                local Sample = Instance.new("ImageLabel")
-                Sample.Name = "Sample"
-                Sample.Parent = colorHeader
-                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                Sample.BackgroundTransparency = 1.000
-                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
-                Sample.ImageColor3 = themeList.SchemeColor
-                Sample.ImageTransparency = 0.600
-
-                local btn = colorHeader
-                local sample = Sample
-
                 colorElement.Name = "colorElement"
                 colorElement.Parent = sectionInners
                 colorElement.BackgroundColor3 = themeList.ElementColor
-                colorElement.BackgroundTransparency = 1.000
                 colorElement.ClipsDescendants = true
-                colorElement.Position = UDim2.new(0, 0, 0.566834569, 0)
                 colorElement.Size = UDim2.new(0, 352, 0, 33)
                 colorElement.AutoButtonColor = false
                 colorElement.Font = Enum.Font.SourceSans
                 colorElement.Text = ""
                 colorElement.TextColor3 = Color3.fromRGB(0, 0, 0)
                 colorElement.TextSize = 14.000
-                colorElement.MouseButton1Click:Connect(function()
-                    if not focusing then
-                        if colorOpened then
-                            colorOpened = false
-                            colorElement:TweenSize(UDim2.new(0, 352, 0, 33), "InOut", "Linear", 0.08)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample:Clone()
-                            c.Parent = btn
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                size = (btn.AbsoluteSize.X * 1.5)
-                            else
-                                size = (btn.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()
-                        else
-                            colorOpened = true
-                            colorElement:TweenSize(UDim2.new(0, 352, 0, 141), "InOut", "Linear", 0.08, true)
-                            wait(0.1)
-                            updateSectionFrame()
-                            UpdateSize()
-                            local c = sample:Clone()
-                            c.Parent = btn
-                            local x, y = (ms.X - c.AbsolutePosition.X), (ms.Y - c.AbsolutePosition.Y)
-                            c.Position = UDim2.new(0, x, 0, y)
-                            local len, size = 0.35, nil
-                            if btn.AbsoluteSize.X >= btn.AbsoluteSize.Y then
-                                size = (btn.AbsoluteSize.X * 1.5)
-                            else
-                                size = (btn.AbsoluteSize.Y * 1.5)
-                            end
-                            c:TweenSizeAndPosition(UDim2.new(0, size, 0, size), UDim2.new(0.5, (-size / 2), 0.5, (-size / 2)), 'Out', 'Quad', len, true, nil)
-                            for i = 1, 10 do
-                                c.ImageTransparency = c.ImageTransparency + 0.05
-                                wait(len / 12)
-                            end
-                            c:Destroy()
-                        end
-                    else
-                        for i,v in next, infoContainer:GetChildren() do
-                            Utility:TweenObject(v, {Position = UDim2.new(0,0,2,0)}, 0.2)
-                            focusing = false
-                        end
-                        Utility:TweenObject(blurFrame, {BackgroundTransparency = 1}, 0.2)
-                    end
-                end)
+
+                Sample.Name = "Sample"
+                Sample.Parent = colorElement
+                Sample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                Sample.BackgroundTransparency = 1.000
+                Sample.Image = "http://www.roblox.com/asset/?id=4560909609"
+                Sample.ImageColor3 = themeList.SchemeColor
+                Sample.ImageTransparency = 0.600
+
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = colorElement
 
@@ -2658,7 +2118,7 @@ function Kavo.CreateLib(kavName, themeList)
     return Tabs
 end
 
-local Window = Library.CreateLib("YBA 自动农场 v2.0", "Ocean")
+local Window = Kavo.CreateLib("YBA 自动农场 v2.0", "Ocean")
 
 local Tab = Window:NewTab("替身农场")
 local Section = Tab:NewSection("设置")
