@@ -1,188 +1,323 @@
--- Fully Complete and Functional Roblox YBA Auto Farm Script with Kavo UI GUI
--- Features: GUI with dropdown for all stands, farm type (stand or skin), toggles for shiny/limited.
--- Auto collects Mysterious Arrow or Rokakaka if missing, with 1.3s delay between actions.
--- Enhanced with more spawn positions based on community sources.
--- Optimized: Uses task.wait, radius checks, error handling, respawn handler.
--- Stand list based on latest YBA tier lists (2025), including all obtainable stands.
--- Script ready to run without errors; assumes correct data paths in game.
+-- Embedded YBA Auto Farm Script with Kavo UI
+-- Features: Stand selection, mode (Stand/Skin), auto collect arrow/roka every 1s, no external dependencies.
 
-local HttpService = game:GetService("HttpService")
-local Library = loadstring(HttpService:GetAsync('https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua'))()
-local Window = Library.CreateLib("YBA Complete Farm Hub", "Ocean")
-
-local Tab = Window:NewTab("Stand/Skin Farm")
-local Section = Tab:NewSection("Farm Configuration")
-
--- Core Services and Variables
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
+
+-- Embedded Kavo UI (simplified version)
+local Library = {
+    CreateLib = function(name, theme)
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Parent = game.CoreGui
+        ScreenGui.Name = "KavoUI"
+        ScreenGui.ResetOnSpawn = false
+
+        local Main = Instance.new("Frame")
+        Main.Parent = ScreenGui
+        Main.Size = UDim2.new(0, 300, 0, 400)
+        Main.Position = UDim2.new(0.5, -150, 0.5, -200)
+        Main.BackgroundColor3 = Color3.fromRGB(36, 37, 43)
+
+        local TabHolder = Instance.new("Frame")
+        TabHolder.Parent = Main
+        TabHolder.Size = UDim2.new(0, 80, 0, 400)
+        TabHolder.BackgroundColor3 = Color3.fromRGB(28, 29, 34)
+
+        local PageHolder = Instance.new("Frame")
+        PageHolder.Parent = Main
+        PageHolder.Size = UDim2.new(0, 220, 0, 400)
+        PageHolder.Position = UDim2.new(0, 80, 0, 0)
+        PageHolder.BackgroundTransparency = 1
+
+        local function CreateTab(name)
+            local TabButton = Instance.new("TextButton")
+            TabButton.Parent = TabHolder
+            TabButton.Size = UDim2.new(0, 80, 0, 40)
+            TabButton.Text = name
+            TabButton.BackgroundColor3 = Color3.fromRGB(74, 99, 135)
+            TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+            local Page = Instance.new("Frame")
+            Page.Parent = PageHolder
+            Page.Size = UDim2.new(1, 0, 1, 0)
+            Page.BackgroundTransparency = 1
+            Page.Visible = false
+
+            if not PageHolder:FindFirstChild("CurrentPage") then
+                Page.Visible = true
+                Page.Name = "CurrentPage"
+            end
+
+            TabButton.MouseButton1Click:Connect(function()
+                for _, v in pairs(PageHolder:GetChildren()) do
+                    v.Visible = false
+                end
+                Page.Visible = true
+                Page.Name = "CurrentPage"
+            end)
+
+            return {
+                NewSection = function(sectionName)
+                    local Section = Instance.new("Frame")
+                    Section.Parent = Page
+                    Section.Size = UDim2.new(1, -20, 0, 0)
+                    Section.Position = UDim2.new(0, 10, 0, 10)
+                    Section.BackgroundColor3 = Color3.fromRGB(32, 32, 38)
+                    Section.BorderSizePixel = 0
+
+                    local function UpdateSize()
+                        local totalHeight = 0
+                        for _, child in pairs(Section:GetChildren()) do
+                            if child:IsA("GuiObject") then
+                                totalHeight = totalHeight + child.Size.Y.Offset + 5
+                            end
+                        end
+                        Section.Size = UDim2.new(1, -20, 0, totalHeight + 10)
+                    end
+
+                    return {
+                        NewDropdown = function(dropdownName, options, callback)
+                            local Dropdown = Instance.new("TextButton")
+                            Dropdown.Parent = Section
+                            Dropdown.Size = UDim2.new(1, -20, 0, 30)
+                            Dropdown.Text = dropdownName .. ": None"
+                            Dropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                            Dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+                            local DropdownList = Instance.new("Frame")
+                            DropdownList.Parent = Section
+                            DropdownList.Size = UDim2.new(1, -20, 0, 0)
+                            DropdownList.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                            DropdownList.Visible = false
+                            DropdownList.Position = UDim2.new(0, 0, 0, 35)
+
+                            local ListLayout = Instance.new("UIListLayout")
+                            ListLayout.Parent = DropdownList
+                            ListLayout.Padding = UDim.new(0, 5)
+
+                            for _, option in pairs(options) do
+                                local Option = Instance.new("TextButton")
+                                Option.Parent = DropdownList
+                                Option.Size = UDim2.new(1, -10, 0, 25)
+                                Option.Text = option
+                                Option.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                                Option.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                Option.MouseButton1Click:Connect(function()
+                                    Dropdown.Text = dropdownName .. ": " .. option
+                                    callback(option)
+                                    DropdownList.Visible = false
+                                end)
+                            end
+
+                            Dropdown.MouseButton1Click:Connect(function()
+                                DropdownList.Visible = not DropdownList.Visible
+                                if DropdownList.Visible then
+                                    DropdownList.Size = UDim2.new(1, -20, 0, #options * 30)
+                                end
+                            end)
+
+                            UpdateSize()
+                            return {}
+                        end,
+
+                        NewToggle = function(toggleName, callback)
+                            local Toggle = Instance.new("TextButton")
+                            Toggle.Parent = Section
+                            Toggle.Size = UDim2.new(1, -20, 0, 30)
+                            Toggle.Text = toggleName .. ": Off"
+                            Toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                            Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+                            Toggle.MouseButton1Click:Connect(function()
+                                local state = Toggle.Text:match("On") == nil
+                                Toggle.Text = toggleName .. ": " .. (state and "On" or "Off")
+                                callback(state)
+                            end)
+
+                            UpdateSize()
+                            return {}
+                        end,
+
+                        NewButton = function(buttonName, callback)
+                            local Button = Instance.new("TextButton")
+                            Button.Parent = Section
+                            Button.Size = UDim2.new(1, -20, 0, 30)
+                            Button.Text = buttonName
+                            Button.BackgroundColor3 = Color3.fromRGB(74, 99, 135)
+                            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+                            Button.MouseButton1Click:Connect(callback)
+
+                            UpdateSize()
+                            return {}
+                        end
+                    }
+                end
+            }
+        end
+    }
+}
+
+-- Initialize UI
+local Window = Library.CreateLib("YBA Stand/Skin Farm", "Ocean")
+local Tab = Window:NewTab("Farm Settings")
+local Section = Tab:NewSection("Configuration")
+
+-- Variables
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local Backpack = LocalPlayer.Backpack
-local Data = LocalPlayer:WaitForChild("Data")  -- Common YBA data path; if not, check PlayerGui.Main
-local StandValue = Data:WaitForChild("Stand")  -- StringValue for stand name
-local SkinValue = Data:WaitForChild("Skin")    -- StringValue for skin (e.g., "Shiny", "Limited", "None")
-
-local targetStand = "Silver Chariot"
-local farmType = "Stand"
+local isFarming = false
+local targetStand = "Star Platinum"
+local farmMode = "Stand"
 local wantShiny = false
 local wantLimited = false
-local isFarming = false
 
--- Full list of all stands in YBA (based on 2025 tier lists)
+-- Stand list
 local AllStands = {
-    "C-Moon", "Chariot Requiem", "Gold Experience Requiem", "Killer Queen Bites the Dust", "King Crimson Requiem",
-    "Made in Heaven", "Silver Chariot Requiem", "Soft & Wet: Go Beyond", "Star Platinum: The World", "The World Over Heaven",
-    "Tusk Act 4", "Aerosmith", "Anubis", "Crazy Diamond", "Dirty Deeds Done Dirt Cheap", "Gold Experience",
-    "King Crimson", "Red Hot Chili Pepper", "Scary Monsters", "Sex Pistols", "Soft & Wet", "Stone Free",
-    "The World", "The World (Alternate Universe)", "Tusk Act 3", "Cream", "Purple Haze", "Star Platinum",
-    "The Hand", "Tusk Act 2", "White Album", "Whitesnake", "Beach Boy", "Hermit Purple", "Hierophant Green",
-    "Magician’s Red", "Mr. President", "Silver Chariot", "Sticky Fingers", "D4C Love Train", "Killer Queen", "Tusk Act 1"
+    "Star Platinum", "The World", "Crazy Diamond", "Silver Chariot", "The Hand", "Gold Experience",
+    "Sticky Fingers", "Hermit Purple", "Magician's Red", "Hierophant Green", "Beach Boy",
+    "Anubis", "Cream", "Killer Queen", "King Crimson", "Tusk Act 2", "White Album",
+    "Purple Haze", "Soft & Wet", "Stone Free", "Aerosmith", "Sex Pistols", "Scary Monsters",
+    "Red Hot Chili Pepper", "Tusk Act 3", "Dirty Deeds Done Dirt Cheap", "Whitesnake",
+    "C-Moon", "Tusk Act 4", "The World (AU)", "Made in Heaven", "Gold Experience Requiem",
+    "King Crimson Requiem", "Silver Chariot Requiem", "Star Platinum: The World", "Chariot Requiem",
+    "D4C Love Train", "The World Over Heaven", "Soft & Wet: Go Beyond", "Killer Queen: Bites the Dust"
 }
 
--- Expanded Hotspot Positions (based on YBA wiki/community hotspots for item spawns)
+-- Spawn positions
 local SpawnPositions = {
-    Vector3.new(-547.5, 4.5, -332.5),  -- Park area
-    Vector3.new(-500, 5, -300),        -- Street near thugs
-    Vector3.new(-600, 5, -400),        -- Building shadows
-    Vector3.new(-450, 5, -250),        -- Roadside
-    Vector3.new(-650, 5, -350),        -- Train station vicinity
-    Vector3.new(-400, 5, -200),        -- Arcade entrance
-    Vector3.new(-700, 5, -450),        -- Sewers/underground access
-    Vector3.new(-350, 5, -150),        -- Main city center
-    Vector3.new(-750, 5, -500),        -- Extended map edges
-    Vector3.new(-300, 5, -100),        -- Fountain/park extension
-    Vector3.new(-550, 5, -400),        -- Pizza shop nearby
-    Vector3.new(-620, 5, -320),        -- Bar/table areas
-    Vector3.new(-480, 5, -280),        -- Parking lot front
-    Vector3.new(-580, 5, -380),        -- Stairs near NPCs
-    Vector3.new(-520, 5, -340)         -- Additional hotspot
+    CFrame.new(-503, 19, -341), -- Park trash
+    CFrame.new(-572, 19, -353), -- Fountain
+    CFrame.new(-641, 19, -378), -- Train station
+    CFrame.new(-432, 19, -285), -- Pizza shop
+    CFrame.new(-695, 19, -413), -- Arcade
+    CFrame.new(-366, 19, -226), -- Main street
+    CFrame.new(-760, 19, -468), -- Bar
+    CFrame.new(-294, 19, -167), -- Parking lot
+    CFrame.new(-549, 19, -397), -- Stairs
+    CFrame.new(-618, 19, -317)  -- NPC area
 }
 
--- GUI Elements for User Input
-Section:NewDropdown("Target Stand Name", "Select the stand to farm", AllStands, function(selected)
-    targetStand = string.lower(selected)  -- Lowercase for case-insensitivity
+-- GUI Setup
+Section:NewDropdown("Select Stand", AllStands, function(selected)
+    targetStand = selected:lower()
+    print("Selected stand: " .. targetStand)
 end)
 
-Section:NewDropdown("Farm Mode", "Select to farm the stand or its skin", {"Stand", "Skin"}, function(selected)
-    farmType = selected
+Section:NewDropdown("Farm Mode", {"Stand", "Skin"}, function(selected)
+    farmMode = selected
+    print("Farm mode: " .. farmMode)
 end)
 
-Section:NewToggle("Require Shiny Skin", "Only keep if skin is Shiny (for Skin mode)", function(state)
+Section:NewToggle("Shiny Skin", function(state)
     wantShiny = state
+    print("Shiny skin: " .. tostring(wantShiny))
 end)
 
-Section:NewToggle("Require Limited Skin", "Only keep if skin is Limited (for Skin mode)", function(state)
+Section:NewToggle("Limited Skin", function(state)
     wantLimited = state
+    print("Limited skin: " .. tostring(wantLimited))
 end)
 
-Section:NewToggle("Enable/Disable Farming", "Start or stop the auto farm loop", function(state)
-    isFarming = state
+Section:NewButton("Start/Stop Farm", function()
+    isFarming = not isFarming
+    print("Farming: " .. tostring(isFarming))
 end)
 
--- Function to Collect Item (Optimized: TP to hotspots, check radius)
+-- Collect item function
 local function CollectItem(itemName)
-    for _, pos in ipairs(SpawnPositions) do
-        if not Character or not HumanoidRootPart then return false end
-        HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))  -- Safe TP above ground
-        task.wait(0.5)  -- Allow area to load
-        
-        -- Efficient radius check (50 studs) for performance
-        local region = Region3.new(pos - Vector3.new(50, 50, 50), pos + Vector3.new(50, 50, 50))
-        local parts = Workspace:FindPartsInRegion3(region, nil, 100)
-        for _, part in ipairs(parts) do
-            if part.Name == itemName and (part:IsA("Part") or part:IsA("MeshPart")) then
-                HumanoidRootPart.CFrame = part.CFrame + Vector3.new(0, 3, 0)  -- TP close
-                task.wait(0.3)
-                local prompt = part:FindFirstChildOfClass("ProximityPrompt")
-                if prompt then
-                    fireproximityprompt(prompt, 1)  -- Interact
-                    task.wait(1.3)  -- User-specified delay
-                    return true  -- Success
-                end
+    for _, obj in pairs(Workspace:GetChildren()) do
+        if obj.Name == itemName and (obj:IsA("Part") or obj:IsA("Model")) then
+            HumanoidRootPart.CFrame = obj.CFrame * CFrame.new(0, 5, 0)
+            task.wait(0.3)
+            local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
+            if prompt then
+                fireproximityprompt(prompt, 1)
+                task.wait(1)  -- 1s delay as requested
+                return true
             end
         end
-        task.wait(1.3)  -- Delay between teleports
     end
-    warn("Could not find " .. itemName .. " after checking all hotspots.")
+    for _, pos in pairs(SpawnPositions) do
+        HumanoidRootPart.CFrame = pos
+        task.wait(1)  -- 1s delay between teleports
+    end
     return false
 end
 
--- Function to Use Item (with pcall for stability)
+-- Use item function
 local function UseItem(itemName)
     local item = Backpack:FindFirstChild(itemName) or Character:FindFirstChild(itemName)
-    if not item then return false end
-    
-    local success, err = pcall(function()
+    if item then
         if item.Parent == Backpack then
-            LocalPlayer.Character.Humanoid:EquipTool(item)
+            Character.Humanoid:EquipTool(item)
         end
-        item:Activate()  -- Use the item
-        task.wait(5)     -- Wait for animation/effect (adjust if needed for YBA)
-    end)
-    
-    if not success then
-        warn("Error using " .. itemName .. ": " .. err)
+        item:Activate()
+        task.wait(4)
+        return true
     end
-    return success
+    return false
 end
 
--- Main Farming Loop (Stable, low CPU)
+-- Get current stand and skin
+local function GetCurrentStandInfo()
+    local success, stand, skin = pcall(function()
+        local data = LocalPlayer:FindFirstChild("Data") or LocalPlayer.PlayerGui.Main:FindFirstChild("Data")
+        return data:FindFirstChild("Stand").Value:lower(), (data:FindFirstChild("Skin") or data:FindFirstChild("SkinName")).Value:lower()
+    end)
+    return success and stand or "", success and skin or "none"
+end
+
+-- Farm loop
 spawn(function()
     while true do
-        task.wait(1)  -- Balanced loop delay
-        if not isFarming or not Character or not HumanoidRootPart then continue end
+        task.wait(0.5)
+        if not isFarming then continue end
         
-        -- Ensure arrow for drawing stand
+        -- Auto collect arrow if missing
         if not (Backpack:FindFirstChild("Mysterious Arrow") or Character:FindFirstChild("Mysterious Arrow")) then
+            print("Searching for Arrow...")
             CollectItem("Mysterious Arrow")
-            task.wait(1)  -- Short cooldown
         end
         
-        -- Use arrow to obtain/roll stand
-        if not UseItem("Mysterious Arrow") then continue end
+        -- Use arrow
+        UseItem("Mysterious Arrow")
+        task.wait(3)
         
-        task.wait(3)  -- Wait for stand to be assigned/updated
-        
-        -- Check current stand and skin (lowercase for matching)
-        local currentStand = string.lower(StandValue.Value or "")
-        local currentSkin = string.lower(SkinValue.Value or "none")
-        
-        local keepStand = false
-        if farmType == "Stand" then
+        -- Check result
+        local currentStand, currentSkin = GetCurrentStandInfo()
+        local keep = false
+        if farmMode == "Stand" then
             if currentStand == targetStand then
-                keepStand = true
+                keep = true
             end
-        elseif farmType == "Skin" then
+        else
             if currentStand == targetStand then
-                if (wantShiny and string.find(currentSkin, "shiny")) or 
-                   (wantLimited and string.find(currentSkin, "limited")) then
-                    keepStand = true
+                if (wantShiny and currentSkin:find("shiny")) or (wantLimited and currentSkin:find("limited")) then
+                    keep = true
                 end
             end
         end
         
-        if not keepStand then
-            -- Reset with roka if not desired
+        if not keep then
+            -- Auto collect roka if missing
             if not (Backpack:FindFirstChild("Rokakaka") or Character:FindFirstChild("Rokakaka")) then
+                print("Searching for Rokakaka...")
                 CollectItem("Rokakaka")
-                task.wait(1)
             end
             UseItem("Rokakaka")
         else
-            -- Success: Notify and stop
-            warn("Success! Obtained desired " .. farmType .. ": " .. StandValue.Value .. " with skin " .. (SkinValue.Value or "None"))
-            isFarming = false  -- Auto-stop on success
+            print("Success! Obtained: " .. currentStand .. " with skin " .. currentSkin)
+            isFarming = false
         end
     end
 end)
 
--- Respawn Handler for Stability
+-- Character respawn handler
 LocalPlayer.CharacterAdded:Connect(function(newChar)
     Character = newChar
     HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
     Backpack = LocalPlayer.Backpack
 end)
-
--- Script complete and functional.
