@@ -1,118 +1,76 @@
--- Services
-local TweenService = game:GetService("TweenService")
+-- ================== CONFIG ==================
+local KEEP_HIDDEN_AFTER = false -- true = 注入结束后仍然隐藏其他UI
+local MY_GUI_NAME = "RyzenInjectorUI"
+-- ===========================================
+
 local Players = game:GetService("Players")
-local SoundService = game:GetService("SoundService")
+local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 🔥 强制覆盖旧 UI
-for _, v in ipairs(playerGui:GetChildren()) do
-	if v.Name == "RyzenInjectorUI" then
-		v:Destroy()
+-- 覆盖旧的管理器（防重复监听）
+if playerGui:FindFirstChild("__RyzenUIManager") then
+	playerGui.__RyzenUIManager:Destroy()
+end
+
+-- 管理器标记
+local manager = Instance.new("Folder")
+manager.Name = "__RyzenUIManager"
+manager.Parent = playerGui
+
+-- 记录被隐藏的 UI（用于恢复）
+local hidden = {}
+
+-- 判断是否应忽略（白名单）
+local function isWhitelisted(gui)
+	if not gui:IsA("ScreenGui") then return true end
+	if gui.Name == MY_GUI_NAME then return true end
+	if gui:IsDescendantOf(CoreGui) then return true end
+	return false
+end
+
+-- 隐藏一个 GUI（安全）
+local function hideGui(gui)
+	if hidden[gui] then return end
+	if gui.Enabled then
+		hidden[gui] = true
+		gui.Enabled = false
 	end
 end
 
--- ScreenGui
-local gui = Instance.new("ScreenGui")
-gui.Name = "RyzenInjectorUI"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.Parent = playerGui
-
--- Main Frame
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 440, 0, 130)
-frame.Position = UDim2.new(1, -460, 1, -160)
-frame.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
-frame.BackgroundTransparency = 1
-frame.Parent = gui
-
--- Rounded
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 20)
-corner.Parent = frame
-
--- Gradient
-local gradient = Instance.new("UIGradient")
-gradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 180, 80)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 120, 0))
-})
-gradient.Rotation = 90
-gradient.Parent = frame
-
--- Glow Stroke
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(255, 170, 60)
-stroke.Thickness = 3
-stroke.Transparency = 1
-stroke.Parent = frame
-
--- Text
-local text = Instance.new("TextLabel")
-text.Size = UDim2.new(1, -24, 1, -24)
-text.Position = UDim2.new(0, 12, 0, 12)
-text.BackgroundTransparency = 1
-text.TextWrapped = true
-text.TextScaled = true
-text.Font = Enum.Font.GothamBold
-text.TextXAlignment = Enum.TextXAlignment.Left
-text.TextYAlignment = Enum.TextYAlignment.Center
-text.TextColor3 = Color3.fromRGB(255, 255, 255)
-text.TextTransparency = 1
-text.Text = "⚡ Congratulations,\nYou have successfully injected\nusing Ryzen Executor"
-text.Parent = frame
-
--- 🔊 Inject Success Sound（避免叠音）
-for _, s in ipairs(SoundService:GetChildren()) do
-	if s.Name == "RyzenInjectSound" then
-		s:Destroy()
+-- 扫描并隐藏当前已有的
+for _, gui in ipairs(playerGui:GetChildren()) do
+	if not isWhitelisted(gui) then
+		hideGui(gui)
 	end
 end
 
-local sound = Instance.new("Sound")
-sound.Name = "RyzenInjectSound"
-sound.SoundId = "rbxassetid://9118826049"
-sound.Volume = 1
-sound.Parent = SoundService
-sound:Play()
+-- 实时拦截新建的 UI
+local conn
+conn = playerGui.ChildAdded:Connect(function(gui)
+	task.defer(function()
+		if not manager.Parent then return end
+		if not isWhitelisted(gui) then
+			hideGui(gui)
+		end
+	end)
+end)
 
--- Fade In
-TweenService:Create(frame, TweenInfo.new(0.45), {
-	BackgroundTransparency = 0
-}):Play()
-
-TweenService:Create(text, TweenInfo.new(0.45), {
-	TextTransparency = 0
-}):Play()
-
-TweenService:Create(stroke, TweenInfo.new(0.6), {
-	Transparency = 0
-}):Play()
-
--- Glow Pulse
-TweenService:Create(
-	stroke,
-	TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-	{ Thickness = 6 }
-):Play()
-
--- ⏱ 停留 6 秒
+-- ========== 这里显示你的注入 UI ==========
+-- （把你之前做好的橙色发光注入 UI 放这里创建）
+-- 示例停留 6 秒：
 task.wait(6)
+-- ========================================
 
--- ⬇️ Drop & Fade
-TweenService:Create(frame, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-	Position = UDim2.new(1, -460, 1, 260),
-	BackgroundTransparency = 1
-}):Play()
+-- 停止拦截
+if conn then conn:Disconnect() end
+manager:Destroy()
 
-TweenService:Create(text, TweenInfo.new(0.5), {
-	TextTransparency = 1
-}):Play()
-
-TweenService:Create(stroke, TweenInfo.new(0.5), {
-	Transparency = 1
-}):Play()
-
-task.wait(1)
-gui:Destroy()
+-- 恢复（可选）
+if not KEEP_HIDDEN_AFTER then
+	for gui, _ in pairs(hidden) do
+		if gui and gui.Parent then
+			gui.Enabled = true
+		end
+	end
+end
